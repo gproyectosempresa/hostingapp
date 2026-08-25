@@ -180,6 +180,7 @@
         html += '</div>';
 
         html += '<table class="tabla mt-2" style="min-width:0"><tbody>';
+        if (p.drawing) html += '<tr><td class="txt-suave">Dibujo</td><td class="negrita txt-tinta mono">' + escapar(p.drawing) + '</td></tr>';
         if (p.profile) html += '<tr><td class="txt-suave">Perfil</td><td class="negrita txt-tinta">' + escapar(p.profile) + '</td></tr>';
         if (p.material) html += '<tr><td class="txt-suave">Material</td><td class="negrita txt-tinta">' + escapar(p.material) + '</td></tr>';
         html += '<tr><td class="txt-suave">Peso unitario</td><td class="negrita txt-tinta">' + numero(p.unit_weight) + ' kg</td></tr>';

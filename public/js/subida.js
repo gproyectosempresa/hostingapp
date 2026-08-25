@@ -22,6 +22,12 @@
     return (b / 1073741824).toFixed(2) + ' GB';
   }
 
+  function numero(n, dec) {
+    return Number(n || 0).toLocaleString('es-MX', {
+      minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 2 : dec
+    });
+  }
+
   function escapar(t) {
     return String(t == null ? '' : t)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -30,8 +36,7 @@
   const IGNORAR = /^(\.|~\$|thumbs\.db$|desktop\.ini$)/i;
 
   function aceptable(file, ruta) {
-    const nombre = file.name || '';
-    if (IGNORAR.test(nombre)) return false;
+    if (IGNORAR.test(file.name || '')) return false;
     if (ruta && ruta.split('/').some(function (p) { return p.indexOf('.') === 0; })) return false;
     return true;
   }
@@ -68,9 +73,7 @@
       const res = document.getElementById(idResumen);
       if (res) {
         const total = lista.reduce(function (a, x) { return a + x.file.size; }, 0);
-        res.textContent = lista.length
-          ? lista.length + ' archivo(s) · ' + pesoLegible(total)
-          : '';
+        res.textContent = lista.length ? lista.length + ' archivo(s) · ' + pesoLegible(total) : '';
       }
     }
   }
@@ -100,6 +103,7 @@
   const btnSueltos = document.getElementById('btnArchivosSueltos');
   const inputSoldadura = document.getElementById('inputSoldadura');
   const inputPiezas = document.getElementById('inputPiezas');
+  const textoPiezas = document.getElementById('piezas_texto');
 
   if (inputCarpeta) {
     inputCarpeta.addEventListener('change', function () {
@@ -117,16 +121,28 @@
       agregar('soldadura', desdeInput(inputSoldadura), 'listaSoldadura');
     });
   }
-  if (inputPiezas && esAlta) {
+  if (inputPiezas) {
     inputPiezas.addEventListener('change', function () {
       const f = inputPiezas.files[0];
       bolsa.piezas = f ? { file: f, ruta: f.name } : null;
       pintarLista('listaPiezasArchivo', bolsa.piezas ? [bolsa.piezas] : []);
     });
-  } else if (inputPiezas) {
-    inputPiezas.addEventListener('change', function () {
-      const f = inputPiezas.files[0];
-      pintarLista('listaPiezasArchivo', f ? [{ file: f, ruta: f.name }] : []);
+  }
+
+  /* ------------------- elegir entre archivo o texto pegado ------------------- */
+
+  const fuente = document.getElementById('fuentePiezas');
+  if (fuente) {
+    fuente.addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-fuente]');
+      if (!btn) return;
+      const cual = btn.getAttribute('data-fuente');
+      fuente.querySelectorAll('[data-fuente]').forEach(function (b) {
+        b.classList.toggle('activa', b === btn);
+      });
+      document.querySelectorAll('[data-fuente-panel]').forEach(function (p) {
+        p.classList.toggle('oculto', p.getAttribute('data-fuente-panel') !== cual);
+      });
     });
   }
 
@@ -161,24 +177,18 @@
     if (!zona) return;
 
     ['dragenter', 'dragover'].forEach(function (ev) {
-      zona.addEventListener(ev, function (e) {
-        e.preventDefault();
-        zona.classList.add('encima');
-      });
+      zona.addEventListener(ev, function (e) { e.preventDefault(); zona.classList.add('encima'); });
     });
     ['dragleave', 'drop'].forEach(function (ev) {
-      zona.addEventListener(ev, function (e) {
-        e.preventDefault();
-        zona.classList.remove('encima');
-      });
+      zona.addEventListener(ev, function (e) { e.preventDefault(); zona.classList.remove('encima'); });
     });
 
     zona.addEventListener('drop', function (e) {
       const dt = e.dataTransfer;
       if (!dt) return;
       const acumulador = [];
+      const tareas = [];
       const items = dt.items;
-      let tareas = [];
 
       if (items && items.length && items[0].webkitGetAsEntry) {
         for (let i = 0; i < items.length; i++) {
@@ -206,7 +216,7 @@
 
   conectarZona('zonaCarpeta', 'documentos', 'listaCarpeta', 'resumenCarpeta');
   conectarZona('zonaSoldadura', 'soldadura', 'listaSoldadura');
-  if (esAlta) conectarZona('zonaPiezas', 'piezas', 'listaPiezasArchivo');
+  conectarZona('zonaPiezas', 'piezas', 'listaPiezasArchivo');
 
   /* ------------------------------ pasos ------------------------------ */
 
@@ -228,16 +238,27 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function validarPaso(n) {
+    if (n === 2) {
+      const nombre = document.getElementById('name');
+      if (nombre && !nombre.value.trim()) {
+        nombre.focus();
+        window.avisar('Escribe el nombre del proyecto para continuar.', 'error');
+        return false;
+      }
+      const entrega = document.getElementById('due_date');
+      if (entrega && !entrega.value) {
+        entrega.focus();
+        window.avisar('Falta la fecha de entrega del proyecto.', 'error');
+        return false;
+      }
+    }
+    return true;
+  }
+
   form.addEventListener('click', function (e) {
     if (e.target.closest('.siguiente-paso')) {
-      if (pasoActual === 1) {
-        const nombre = document.getElementById('name');
-        if (nombre && !nombre.value.trim()) {
-          nombre.focus();
-          window.avisar('Escribe el nombre del proyecto para continuar.', 'error');
-          return;
-        }
-      }
+      if (!validarPaso(pasoActual)) return;
       irAPaso(Math.min(pasoActual + 1, paneles.length));
     }
     if (e.target.closest('.anterior-paso')) irAPaso(Math.max(pasoActual - 1, 1));
@@ -254,6 +275,119 @@
     });
   });
 
+  /* =====================================================================
+     Paso 1 -> lee la lista de piezas y llena solo los datos del proyecto
+     ===================================================================== */
+
+  const btnAnalizar = document.getElementById('btnAnalizar');
+  const estadoAnalisis = document.getElementById('estadoAnalisis');
+  let ultimoAnalisis = null;
+
+  function ponerSiVacio(id, valor) {
+    const campo = document.getElementById(id);
+    if (campo && valor && !campo.value.trim()) campo.value = valor;
+  }
+
+  function describirPeso(datos) {
+    const ejemplo = document.getElementById('ejemploPeso');
+    if (!ejemplo || !datos || !datos.muestra || !datos.muestra.length) return;
+    const p = datos.muestra.find(function (x) { return x.qty > 1; }) || datos.muestra[0];
+    const esTotal = document.getElementById('peso_es_total').value === '1';
+    const unit = esTotal ? p.total_weight / (p.qty || 1) : p.unit_weight;
+    const total = esTotal ? p.total_weight : p.unit_weight * p.qty;
+    ejemplo.innerHTML = 'Ejemplo con <b>' + escapar(p.mark) + '</b>: ' + numero(p.qty) +
+      ' pieza(s) × ' + numero(unit, 2) + ' kg = <b>' + numero(total, 2) + ' kg</b>';
+  }
+
+  function mostrarResumen(datos) {
+    ultimoAnalisis = datos;
+
+    ponerSiVacio('name', datos.proyecto.name);
+    ponerSiVacio('code', datos.proyecto.code);
+    ponerSiVacio('client', datos.proyecto.client);
+    ponerSiVacio('client_code', datos.proyecto.client_code);
+
+    const caja = document.getElementById('resumenPiezas');
+    const txt = document.getElementById('resumenPiezasTxt');
+    if (caja && txt) {
+      let html = '<b>Se leyeron ' + datos.totals.piezas + ' renglones · ' +
+        numero(datos.totals.cantidad) + ' piezas · ' + numero(datos.totals.peso, 2) + ' kg</b>';
+      if (datos.totals.conDibujo) {
+        html += '<div class="txt-chico">' + datos.totals.conDibujo + ' con numero de dibujo, ' +
+          'se vincularan solas con los planos que subas.</div>';
+      }
+      const cols = Object.keys(datos.mapping).length;
+      html += '<div class="txt-chico txt-suave">Columnas reconocidas (' + cols + '): ' +
+        Object.keys(datos.mapping).map(function (k) { return escapar(datos.mapping[k]); }).join(', ') + '</div>';
+      (datos.warnings || []).forEach(function (w) {
+        html += '<div class="txt-chico" style="color:#96620a">⚠ ' + escapar(w) + '</div>';
+      });
+      txt.innerHTML = html;
+      caja.classList.remove('oculto');
+    }
+
+    const avisoPeso = document.getElementById('avisoPeso');
+    if (avisoPeso) {
+      avisoPeso.classList.toggle('oculto', !datos.pesoAmbiguo);
+      if (datos.pesoAmbiguo) describirPeso(datos);
+    }
+
+    irAPaso(2);
+  }
+
+  if (btnAnalizar) {
+    btnAnalizar.addEventListener('click', function () {
+      const hayArchivo = !!bolsa.piezas;
+      const hayTexto = textoPiezas && textoPiezas.value.trim().length > 0;
+
+      if (!hayArchivo && !hayTexto) {
+        if (window.confirm('No seleccionaste ninguna lista de piezas.\n\nPuedes crear el proyecto ahora y subir el listado despues. Continuar?')) {
+          irAPaso(2);
+        }
+        return;
+      }
+
+      const datos = new FormData();
+      if (hayArchivo) datos.append('piezas', bolsa.piezas.file, bolsa.piezas.file.name);
+      if (hayTexto) datos.append('piezas_texto', textoPiezas.value);
+      datos.append('peso_es_total', document.getElementById('peso_es_total').value);
+
+      btnAnalizar.disabled = true;
+      btnAnalizar.classList.add('pulsando');
+      if (estadoAnalisis) estadoAnalisis.textContent = 'Leyendo la lista...';
+
+      fetch('/admin/nuevo/analizar', { method: 'POST', body: datos })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          btnAnalizar.disabled = false;
+          btnAnalizar.classList.remove('pulsando');
+          if (estadoAnalisis) estadoAnalisis.textContent = '';
+          if (!data.ok) {
+            window.avisar(data.error || 'No se pudo leer la lista.', 'error');
+            return;
+          }
+          mostrarResumen(data);
+          window.avisar(data.totals.piezas + ' renglones leidos correctamente.', 'exito');
+        })
+        .catch(function () {
+          btnAnalizar.disabled = false;
+          btnAnalizar.classList.remove('pulsando');
+          if (estadoAnalisis) estadoAnalisis.textContent = '';
+          window.avisar('No se pudo leer la lista. Revisa el archivo e intenta de nuevo.', 'error');
+        });
+    });
+  }
+
+  /* peso unitario o peso del renglon */
+  document.querySelectorAll('[data-peso]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-peso]').forEach(function (x) { x.classList.remove('activo'); });
+      b.classList.add('activo');
+      document.getElementById('peso_es_total').value = b.getAttribute('data-peso');
+      describirPeso(ultimoAnalisis);
+    });
+  });
+
   /* ------------------------------ enviar ------------------------------ */
 
   const cajaProgreso = document.getElementById('cajaProgreso');
@@ -264,6 +398,7 @@
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (esAlta && !validarPaso(2)) { irAPaso(2); return; }
 
     const datos = new FormData();
 
@@ -312,7 +447,6 @@
       if (xhr.status >= 200 && xhr.status < 400) {
         window.location.href = xhr.responseURL || (esAlta ? '/admin' : window.location.href);
       } else {
-        // el servidor devolvio la pagina con el error: la mostramos completa
         document.open();
         document.write(xhr.responseText);
         document.close();

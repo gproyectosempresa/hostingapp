@@ -8,14 +8,19 @@ soldadura, modelo 3D en Autodesk y un checklist de avance que se guarda solo.
 
 ## Cómo funciona
 
-**Ingeniería / Administrador**
-1. Da de alta el proyecto (nombre, cliente, obra).
-2. Sube **la carpeta completa** de planos (PDF, DXF, DWG, imágenes) — se respetan las subcarpetas.
-3. Sube los **PDF de especificaciones de soldadura** (WPS, PQR).
-4. Sube el **Excel o CSV del listado de piezas** con su peso.
-5. Pega el **link del visor de Autodesk** del modelo 3D / IFC.
-6. La plataforma genera sola la página del proyecto y **el enlace listo para grabar en la NFC**,
-   además del código QR para imprimir.
+**Ingeniería / Administrador** — asistente de 4 pasos
+
+1. **Lista de piezas.** Sube el Excel/CSV **o pega las filas copiadas de Excel**. De ahí se leen
+   solas las piezas, sus pesos, el número de dibujo y — si el archivo las trae — las columnas
+   *Nombre Proyecto*, *Proyecto*, *Cliente* y *Code_Cliente*.
+2. **Datos del proyecto.** Llegan ya llenos con lo detectado; sólo confirmas y pones la
+   **fecha de entrega** y las etapas del checklist.
+3. **Planos.** Sube la carpeta completa (PDF, DXF, DWG, imágenes; se respetan las subcarpetas)
+   y los PDF de especificaciones de soldadura.
+4. **Modelo 3D.** Pega el link del visor de Autodesk.
+
+Al guardar, la plataforma genera sola la página del proyecto, **el enlace listo para grabar en la
+NFC** y el código QR para imprimir.
 
 **Personal de taller (Usuario)**
 1. Acerca el celular a la etiqueta NFC pegada en el proyecto.
@@ -102,38 +107,67 @@ Abre `http://localhost:3000`.
 
 ## Formato del Excel de piezas
 
-La primera fila debe traer los encabezados. Se reconocen automáticamente estos nombres
-(y sus variantes en singular/plural, con o sin acentos):
+La fila de encabezados manda; **el orden de las columnas no importa**. Se reconocen estos
+nombres y sus variantes (singular/plural, con o sin acentos):
+
+### Columnas de la pieza
 
 | Columna | Se reconoce como | ¿Obligatoria? |
 |---|---|---|
-| **Marca** | Marca, Pieza, Elemento, Clave, Piece Mark, No. | **Sí** |
-| **Descripción** | Descripción, Nombre, Concepto, Detalle | No |
+| **Marca** | Marca, Piece Mark, Part Mark, Pieza, Elemento, Clave, Código | **Sí** |
+| **Dibujo** | Dibujo, No. Dibujo, Plano, Drawing, DWG | No (pero muy recomendable) |
+| **Descripción** | Descripción, Pieza, Elemento, Concepto, Detalle | No |
 | **Perfil** | Perfil, Sección, Medida, Dimensión | No |
 | **Material** | Material, Grado, Acero, Norma | No |
 | **Cantidad** | Cantidad, Cant, Pzas, Qty | No (por defecto 1) |
-| **Peso unitario** | Peso unitario, Peso c/u, Kg/pza, Peso | **Sí** (o el total) |
+| **Peso** | Peso, Peso unitario, Peso c/u, Kg/pza | **Sí** (o el total) |
 | **Peso total** | Peso total, Total kg, Kg total | **Sí** (o el unitario) |
 | **Lote** | Lote, Fase, Etapa, Área, Zona, Nivel, Eje | No |
 
-Detalles útiles:
+### Columnas del proyecto (opcionales, para llenar el alta automáticamente)
+
+| Columna | Se reconoce como | Llena |
+|---|---|---|
+| **Nombre Proyecto** | Nombre Proyecto, Project Name | El nombre del proyecto |
+| **Proyecto** | Proyecto, Orden de trabajo, Shop Order, Job | El código del proyecto |
+| **Cliente** | Cliente, Customer | El cliente |
+| **Code_Cliente** | Code_Cliente, Código Cliente | El código de cliente |
+
+Si la hoja trae **Marca** y **Pieza** a la vez, *Marca* se usa como marca y *Pieza* como
+descripción, sin importar cuál columna venga primero.
+
+### Detalles útiles
+
+- **Pegar en vez de subir:** en el paso 1 puedes copiar las filas en Excel (con encabezados)
+  y pegarlas directo en pantalla, sin generar archivo.
+- **Peso ambiguo:** si la columna se llama sólo *"Peso"*, la plataforma te pregunta si es el peso
+  de una pieza o el del renglón completo, y te muestra un ejemplo con tus propios números.
 - Si falta el peso total, se calcula con `unitario × cantidad` (y al revés).
+- **Decimales:** se analiza la columna completa para decidir si el punto es decimal o separador de
+  miles. Así `417.726` junto a `995.629656` se entiende bien como 417.726 kg, no como 417 726 kg.
+  Acepta `1.234,50`, `1,234.50`, `850,25` y `12 500,75 kg`.
+- Los guiones sueltos al final de una marca se quitan: `UPPER HV CLAMP-` → `UPPER HV CLAMP`.
 - Las filas de **TOTAL / SUMA** al final se ignoran solas.
 - Si una marca se repite (mismo lote), se suman sus cantidades y pesos en un solo renglón.
 - Acepta `.xlsx`, `.xls` y `.csv` (con coma, punto y coma o tabulador).
-- Los encabezados pueden estar en cualquiera de las primeras 15 filas — no importa si arriba
+- Los encabezados pueden estar en cualquiera de las primeras 20 filas — no importa si arriba
   traes el título del proyecto o el logo.
 
 ---
 
 ## Cómo se vinculan los planos con las piezas
 
-La plataforma revisa el **nombre de cada archivo** (y su subcarpeta) y busca la marca de la pieza.
+La plataforma revisa el **nombre de cada archivo** (y su subcarpeta) buscando primero el
+**número de dibujo** y, si la pieza no tiene, su **marca**.
 
-| Marca en el Excel | Archivos que sí reconoce | Archivos que NO |
+| Dato en el Excel | Archivos que sí reconoce | Archivos que NO |
 |---|---|---|
-| `V-101` | `V-101.pdf`, `V101_rev2.pdf`, `TRABE V 101.dxf`, `v_101.dwg` | `V-1010.pdf` |
-| `C1` | `C1.pdf`, `Columna C-1 montaje.pdf` | `C12.pdf` |
+| Dibujo `1ZXX461026C8242` | `1ZXX461026C8242.pdf`, `1ZXX-461026-C8242 rev2.pdf` | `1ZXX461026C82420.pdf` |
+| Marca `V-101` | `V-101.pdf`, `V101_rev2.pdf`, `TRABE V 101.dxf`, `v_101.dwg` | `V-1010.pdf` |
+| Marca `C1` | `C1.pdf`, `Columna C-1 montaje.pdf` | `C12.pdf` |
+
+Los guiones, puntos, guiones bajos y espacios son indistintos: `1ZXX-461026-C8242` y
+`1ZXX461026C8242` se consideran el mismo dibujo.
 
 Si un plano quedó sin vincular, corrige el nombre del archivo, vuelve a subirlo y usa el botón
 **Revincular** en la pestaña de Documentos del proyecto.

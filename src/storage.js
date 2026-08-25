@@ -40,7 +40,7 @@ const upload = multer({
  *  aparece en el nombre del archivo (o de su carpeta).
  * ------------------------------------------------------------------ */
 function relinkProject(projectId) {
-  const pieces = db.prepare('SELECT id, mark FROM pieces WHERE project_id = ?').all(projectId);
+  const pieces = db.prepare('SELECT id, mark, drawing FROM pieces WHERE project_id = ?').all(projectId);
   const docs = db.prepare(
     "SELECT id, original_name, rel_folder FROM documents WHERE project_id = ? AND category IN ('plano','general','modelo')"
   ).all(projectId);
@@ -55,7 +55,14 @@ function relinkProject(projectId) {
     for (const doc of docs) {
       const hay = (doc.rel_folder ? doc.rel_folder + '/' : '') + doc.original_name;
       for (const piece of pieces) {
-        if (fileMatchesMark(hay, piece.mark)) insert.run(doc.id, piece.id);
+        // El numero de dibujo manda: es el que trae el nombre del archivo.
+        // Si la pieza no tiene dibujo, se busca por su marca.
+        const referencia = piece.drawing || piece.mark;
+        if (fileMatchesMark(hay, referencia)) {
+          insert.run(doc.id, piece.id);
+        } else if (piece.drawing && piece.mark && fileMatchesMark(hay, piece.mark)) {
+          insert.run(doc.id, piece.id);
+        }
       }
     }
   });

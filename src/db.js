@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS projects (
   code          TEXT,
   name          TEXT NOT NULL,
   client        TEXT,
+  client_code   TEXT,
   location      TEXT,
   description   TEXT,
   status        TEXT NOT NULL DEFAULT 'activo',      -- 'activo' | 'pausado' | 'terminado'
@@ -60,6 +61,7 @@ CREATE TABLE IF NOT EXISTS pieces (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   mark          TEXT NOT NULL,
+  drawing       TEXT,                                -- numero de dibujo / plano
   description   TEXT,
   profile       TEXT,
   material      TEXT,
@@ -278,6 +280,36 @@ const db = {
   }
 };
 
+/**
+ * Agrega columnas nuevas a bases de datos creadas con versiones anteriores,
+ * sin tocar la informacion que ya tengan.
+ */
+function migrar() {
+  const columnasNuevas = [
+    ['pieces', 'drawing', 'TEXT'],
+    ['projects', 'client_code', 'TEXT']
+  ];
+
+  for (const [tabla, columna, tipo] of columnasNuevas) {
+    let existe = false;
+    try {
+      const info = cruda.exec('PRAGMA table_info(' + tabla + ')');
+      const filas = (info[0] && info[0].values) || [];
+      existe = filas.some((f) => String(f[1]).toLowerCase() === columna.toLowerCase());
+    } catch (_) {
+      existe = true;   // ante la duda, no tocar nada
+    }
+    if (!existe) {
+      try {
+        cruda.exec('ALTER TABLE ' + tabla + ' ADD COLUMN ' + columna + ' ' + tipo + ';');
+        console.log('[bd] Columna agregada: ' + tabla + '.' + columna);
+      } catch (e) {
+        console.error('[bd] No se pudo agregar ' + tabla + '.' + columna + ':', e.message);
+      }
+    }
+  }
+}
+
 /** Carga el motor WASM, abre el archivo y crea las tablas que falten. */
 async function initDb() {
   if (cruda) return db;
@@ -298,6 +330,7 @@ async function initDb() {
   cruda = previa && previa.length ? new SQL.Database(previa) : new SQL.Database();
   cruda.exec('PRAGMA foreign_keys = ON;');
   cruda.exec(ESQUEMA);
+  migrar();
   guardar();
 
   // Nunca perder cambios al apagar el servidor

@@ -260,7 +260,8 @@ router.get('/p/:slug/avance.csv', auth.requireLogin, (req, res) => {
   for (const c of checks) (map[c.piece_id] = map[c.piece_id] || {})[c.stage] = c;
 
   const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-  const head = ['Marca', 'Descripcion', 'Perfil', 'Material', 'Cantidad', 'Peso unitario (kg)', 'Peso total (kg)', 'Lote']
+  const head = ['Marca', 'Dibujo', 'Descripcion', 'Perfil', 'Material', 'Cantidad',
+    'Peso unitario (kg)', 'Peso total (kg)', 'Lote']
     .concat(stages).concat(['Ultima actualizacion', 'Registro por']);
   const lines = [head.map(esc).join(',')];
 
@@ -268,7 +269,7 @@ router.get('/p/:slug/avance.csv', auth.requireLogin, (req, res) => {
     const marks = stages.map((s) => (map[p.id] && map[p.id][s] ? 'SI' : ''));
     const last = stages.map((s) => map[p.id] && map[p.id][s]).filter(Boolean)
       .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))[0];
-    lines.push([p.mark, p.description, p.profile, p.material, p.qty, p.unit_weight, p.total_weight, p.lot]
+    lines.push([p.mark, p.drawing, p.description, p.profile, p.material, p.qty, p.unit_weight, p.total_weight, p.lot]
       .concat(marks)
       .concat([last ? last.updated_at : '', last ? last.user_name || '' : ''])
       .map(esc).join(','));

@@ -5,7 +5,7 @@ const QRCode = require('qrcode');
 const { db, getStages, setStages, setSetting, getSetting, log, DEFAULT_STAGES } = require('../db');
 const authLib = require('../auth');
 const mailer = require('../mailer');
-const { parsePieces } = require('../importer');
+const { parsePieces, parsePastedText } = require('../importer');
 const storage = require('../storage');
 const {
   uniqueSlug, token, humanSize, fmtKg, fmtNum, fmtDate, parseViewerUrl, slugify
@@ -37,17 +37,19 @@ function asArray(v) {
 /** Guarda o reemplaza el listado de piezas de un proyecto. */
 function savePieces(projectId, rows, replace, userId) {
   const insert = db.prepare(`INSERT INTO pieces
-    (project_id, mark, description, profile, material, qty, unit_weight, total_weight, lot, sort_order)
-    VALUES (@project_id,@mark,@description,@profile,@material,@qty,@unit_weight,@total_weight,@lot,@sort_order)
+    (project_id, mark, drawing, description, profile, material, qty, unit_weight, total_weight, lot, sort_order)
+    VALUES (@project_id,@mark,@drawing,@description,@profile,@material,@qty,@unit_weight,@total_weight,@lot,@sort_order)
     ON CONFLICT(project_id, mark, lot) DO UPDATE SET
-      description = excluded.description, profile = excluded.profile, material = excluded.material,
-      qty = excluded.qty, unit_weight = excluded.unit_weight, total_weight = excluded.total_weight`);
+      drawing = excluded.drawing, description = excluded.description, profile = excluded.profile,
+      material = excluded.material, qty = excluded.qty, unit_weight = excluded.unit_weight,
+      total_weight = excluded.total_weight`);
 
   const run = db.transaction(() => {
     if (replace) db.prepare('DELETE FROM pieces WHERE project_id = ?').run(projectId);
     rows.forEach((r, i) => insert.run({
       project_id: projectId,
       mark: r.mark,
+      drawing: r.drawing || '',
       description: r.description || '',
       profile: r.profile || '',
       material: r.material || '',
@@ -60,6 +62,16 @@ function savePieces(projectId, rows, replace, userId) {
   });
   run();
   log(projectId, userId, 'piezas', rows.length + ' piezas importadas');
+}
+
+/**
+ * Lee las piezas desde el archivo subido O desde el texto pegado en pantalla.
+ * Devuelve el mismo formato en los dos casos.
+ */
+async function leerPiezas(archivo, texto, opciones) {
+  if (archivo) return parsePieces(archivo.path, archivo.originalname, opciones);
+  if (texto && String(texto).trim()) return parsePastedText(texto, opciones);
+  return null;
 }
 
 /* ============================== TABLERO ============================== */
@@ -113,6 +125,41 @@ router.get('/nuevo', (req, res) => {
   });
 });
 
+/**
+ * Paso 1 del asistente: lee la lista de piezas (archivo o texto pegado) y
+ * devuelve en JSON los datos del proyecto detectados y un resumen, para
+ * mostrarlos en pantalla antes de crear nada.
+ */
+router.post('/nuevo/analizar', uploadFields, async (req, res) => {
+  const archivo = (req.files && req.files.piezas || [])[0];
+  const texto = req.body.piezas_texto;
+  const opciones = { pesoEsTotal: req.body.peso_es_total === '1' };
+
+  try {
+    const leido = await leerPiezas(archivo, texto, opciones);
+    if (!leido) {
+      return res.status(400).json({ ok: false, error: 'Sube el archivo de piezas o pega la informacion.' });
+    }
+    if (!leido.ok) return res.status(400).json({ ok: false, error: leido.error });
+
+    res.json({
+      ok: true,
+      proyecto: leido.proyecto,
+      mapping: leido.mapping,
+      totals: leido.totals,
+      warnings: leido.warnings,
+      pesoAmbiguo: leido.pesoAmbiguo,
+      pesoEsTotal: leido.pesoEsTotal,
+      muestra: leido.rows.slice(0, 8),
+      columnasFaltantes: ['drawing', 'qty', 'unit_weight'].filter((c) => !leido.mapping[c])
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'No se pudo leer la lista: ' + e.message });
+  } finally {
+    if (archivo) storage.cleanTmp([archivo]);
+  }
+});
+
 router.post('/nuevo', uploadFields, async (req, res) => {
   const b = req.body;
   const files = req.files || {};
@@ -134,22 +181,22 @@ router.post('/nuevo', uploadFields, async (req, res) => {
     return fail('El link del visor Autodesk no parece una direccion valida (debe empezar con https://).');
   }
 
-  // Listado de piezas
+  // Listado de piezas: archivo subido o texto pegado
   let parsed = null;
   const piezasFile = (files.piezas || [])[0];
-  if (piezasFile) {
-    parsed = await parsePieces(piezasFile.path, piezasFile.originalname);
-    if (!parsed.ok) return fail(parsed.error);
-  }
+  parsed = await leerPiezas(piezasFile, b.piezas_texto, { pesoEsTotal: b.peso_es_total === '1' });
+  if (parsed && !parsed.ok) return fail(parsed.error);
 
   const slug = uniqueSlug(db, b.slug ? slugify(b.slug) : name);
   const info = db.prepare(`INSERT INTO projects
-    (slug, code, name, client, location, description, status, viewer_url, color, start_date, due_date, created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    (slug, code, name, client, client_code, location, description, status, viewer_url, color,
+     start_date, due_date, created_by)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
     slug,
     String(b.code || '').trim(),
     name,
     String(b.client || '').trim(),
+    String(b.client_code || '').trim(),
     String(b.location || '').trim(),
     String(b.description || '').trim(),
     b.status || 'activo',
@@ -248,12 +295,13 @@ router.post('/proyecto/:id/editar', (req, res) => {
     slug = uniqueSlug(db, slugify(b.slug));
   }
 
-  db.prepare(`UPDATE projects SET code=?, name=?, client=?, location=?, description=?, status=?,
-      viewer_url=?, color=?, start_date=?, due_date=?, slug=?, updated_at=datetime('now') WHERE id=?`)
+  db.prepare(`UPDATE projects SET code=?, name=?, client=?, client_code=?, location=?, description=?,
+      status=?, viewer_url=?, color=?, start_date=?, due_date=?, slug=?, updated_at=datetime('now')
+      WHERE id=?`)
     .run(
       String(b.code || '').trim(), String(b.name || project.name).trim(), String(b.client || '').trim(),
-      String(b.location || '').trim(), String(b.description || '').trim(), b.status || 'activo',
-      String(b.viewer_url || '').trim(), b.color || project.color,
+      String(b.client_code || '').trim(), String(b.location || '').trim(), String(b.description || '').trim(),
+      b.status || 'activo', String(b.viewer_url || '').trim(), b.color || project.color,
       String(b.start_date || '').trim(), String(b.due_date || '').trim(), slug, project.id
     );
 
@@ -295,12 +343,13 @@ router.post('/proyecto/:id/piezas', uploadFields, async (req, res) => {
   const project = loadProject(req.params.id);
   if (!project) return res.status(404).send('No encontrado');
   const file = (req.files && req.files.piezas || [])[0];
-  if (!file) {
-    req.session.flash = { tipo: 'error', texto: 'Selecciona el archivo de piezas (Excel o CSV).' };
+  const parsed = await leerPiezas(file, req.body.piezas_texto, { pesoEsTotal: req.body.peso_es_total === '1' });
+  storage.cleanTmp(file ? [file] : []);
+
+  if (!parsed) {
+    req.session.flash = { tipo: 'error', texto: 'Sube el archivo de piezas (Excel o CSV) o pega la informacion.' };
     return res.redirect('/admin/proyecto/' + project.id + '#piezas');
   }
-  const parsed = await parsePieces(file.path, file.originalname);
-  storage.cleanTmp([file]);
 
   if (!parsed.ok) {
     req.session.flash = { tipo: 'error', texto: parsed.error };

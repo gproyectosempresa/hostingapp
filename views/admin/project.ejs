@@ -197,20 +197,50 @@
       <div class="tarjeta mb-2">
         <div class="tarjeta-cab"><%- icon('lista', 20) %><h3 class="crece">Importar listado de piezas</h3></div>
         <form method="post" action="/admin/proyecto/<%= project.id %>/piezas" enctype="multipart/form-data">
-          <div class="zona" id="zonaPiezas">
-            <input type="file" name="piezas" id="inputPiezas" accept=".xlsx,.xls,.csv,.txt" required>
-            <div class="zona-icono"><%- icon('lista', 22) %></div>
-            <b>Sube el Excel o CSV de piezas</b>
-            <small>Columnas: Marca, Descripcion, Perfil, Material, Cantidad, Peso unitario, Peso total, Lote</small>
+          <div class="pestanas" style="position:static;margin-bottom:16px" id="fuentePiezas">
+            <button type="button" class="pestana activa" data-fuente="archivo">
+              <%- icon('archivo', 16) %> Subir archivo
+            </button>
+            <button type="button" class="pestana" data-fuente="pegar">
+              <%- icon('copiar', 16) %> Pegar la informacion
+            </button>
           </div>
-          <div class="lista-archivos" id="listaPiezasArchivo"></div>
-          <div class="fila-entre mt-2">
-            <div class="campo" style="margin:0;min-width:230px">
-              <label for="modo" style="font-size:.78rem">Al importar</label>
-              <select name="modo" id="modo">
-                <option value="reemplazar">Reemplazar todo el listado</option>
-                <option value="agregar">Agregar / actualizar piezas</option>
-              </select>
+
+          <div data-fuente-panel="archivo">
+            <div class="zona" id="zonaPiezas">
+              <input type="file" name="piezas" id="inputPiezas" accept=".xlsx,.xls,.csv,.txt">
+              <div class="zona-icono"><%- icon('lista', 22) %></div>
+              <b>Sube el Excel o CSV de piezas</b>
+              <small>Marca, Pieza, Dibujo, Cantidad, Peso, Peso total, Perfil, Material, Lote</small>
+            </div>
+            <div class="lista-archivos" id="listaPiezasArchivo"></div>
+          </div>
+
+          <div data-fuente-panel="pegar" class="oculto">
+            <div class="campo">
+              <label for="piezas_texto">Copia las filas en Excel y pegalas aqui</label>
+              <textarea id="piezas_texto" name="piezas_texto" style="min-height:170px;font-family:'SF Mono','Cascadia Mono',Consolas,monospace;font-size:13px"
+                        placeholder="Marca	Cantidad	Peso	Dibujo"></textarea>
+              <small class="ayuda">Incluye la fila de encabezados junto con las piezas.</small>
+            </div>
+          </div>
+
+          <div class="fila-entre mt-2" style="gap:10px;flex-wrap:wrap">
+            <div class="fila" style="gap:10px;flex-wrap:wrap">
+              <div class="campo" style="margin:0;min-width:210px">
+                <label for="modo" style="font-size:.78rem">Al importar</label>
+                <select name="modo" id="modo">
+                  <option value="reemplazar">Reemplazar todo el listado</option>
+                  <option value="agregar">Agregar / actualizar piezas</option>
+                </select>
+              </div>
+              <div class="campo" style="margin:0;min-width:210px">
+                <label for="peso_es_total" style="font-size:.78rem">La columna "Peso" es</label>
+                <select name="peso_es_total" id="peso_es_total">
+                  <option value="0">Peso de UNA pieza</option>
+                  <option value="1">Peso TOTAL del renglon</option>
+                </select>
+              </div>
             </div>
             <button type="submit" class="btn btn-primario"><%- icon('subir', 17) %> Importar piezas</button>
           </div>
@@ -245,15 +275,16 @@
           <table class="tabla">
             <thead>
               <tr>
-                <th>Marca</th><th>Descripcion</th><th>Perfil</th><th>Material</th>
+                <th>Marca</th><th>Dibujo</th><th>Descripcion</th><th>Perfil</th><th>Material</th>
                 <th class="num">Cant</th><th class="num">Unitario</th><th class="num">Total kg</th>
                 <th>Lote</th><th class="num">Planos</th><th></th>
               </tr>
             </thead>
             <tbody id="tablaPiezas">
               <% pieces.forEach(function (p) { %>
-                <tr data-buscar="<%= (p.mark + ' ' + (p.description || '') + ' ' + (p.profile || '') + ' ' + (p.lot || '')).toLowerCase() %>">
+                <tr data-buscar="<%= (p.mark + ' ' + (p.drawing || '') + ' ' + (p.description || '') + ' ' + (p.profile || '') + ' ' + (p.lot || '')).toLowerCase() %>">
                   <td class="marca-celda"><%= p.mark %></td>
+                  <td class="mono txt-chico"><%= p.drawing || '' %></td>
                   <td><%= p.description || '' %></td>
                   <td><%= p.profile || '' %></td>
                   <td><%= p.material || '' %></td>
@@ -291,13 +322,17 @@
             <input type="text" id="name" name="name" value="<%= project.name %>" required>
           </div>
           <div class="fila-campos dos">
-            <div class="campo"><label for="code">Codigo</label>
+            <div class="campo"><label for="code">Codigo / No. de proyecto</label>
               <input type="text" id="code" name="code" value="<%= project.code || '' %>"></div>
             <div class="campo"><label for="client">Cliente</label>
               <input type="text" id="client" name="client" value="<%= project.client || '' %>"></div>
           </div>
-          <div class="campo"><label for="location">Ubicacion</label>
-            <input type="text" id="location" name="location" value="<%= project.location || '' %>"></div>
+          <div class="fila-campos dos">
+            <div class="campo"><label for="client_code">Codigo de cliente</label>
+              <input type="text" id="client_code" name="client_code" value="<%= project.client_code || '' %>"></div>
+            <div class="campo"><label for="location">Ubicacion</label>
+              <input type="text" id="location" name="location" value="<%= project.location || '' %>"></div>
+          </div>
           <div class="fila-campos tres">
             <div class="campo"><label for="start_date">Inicio</label>
               <input type="date" id="start_date" name="start_date" value="<%= project.start_date || '' %>"></div>
