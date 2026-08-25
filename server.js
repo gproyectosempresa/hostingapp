@@ -11,6 +11,7 @@ const multer = require('multer');
 const { db, initDb } = require('./src/db');
 const auth = require('./src/auth');
 const { icon } = require('./src/icons');
+const { versionDeAssets } = require('./src/assets');
 const authRoutes = require('./src/routes/auth.routes');
 const adminRoutes = require('./src/routes/admin.routes');
 const projectRoutes = require('./src/routes/project.routes');
@@ -23,6 +24,9 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.locals.icon = icon;
 app.locals.anio = new Date().getFullYear();
+// Version de estilos y JavaScript, para que el navegador no se quede
+// con los archivos viejos despues de actualizar la plataforma.
+app.locals.v = versionDeAssets(path.join(__dirname, 'public'));
 
 // Comprime el HTML: las listas de cientos de piezas viajan hasta 10 veces
 // mas ligeras al celular del taller.
@@ -45,6 +49,13 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
+  // Las paginas nunca se guardan en cache: asi siempre traen la version
+  // actual de los estilos y el JavaScript (y no muestran datos de una
+  // sesion anterior al presionar "atras").
+  if (!req.path.startsWith('/static') && !req.path.startsWith('/archivo')) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
   next();
 });
 
