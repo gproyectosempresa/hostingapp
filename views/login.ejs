@@ -1,0 +1,48 @@
+<%- include('partials/head') %>
+<div class="acceso">
+  <div class="acceso-caja">
+    <div class="acceso-logo"><%- icon('nfc', 30) %></div>
+    <h1><%= appName %></h1>
+    <p class="lema">Planos, piezas y avance de fabricacion en tu celular</p>
+
+    <% if (aviso) { %>
+      <div class="aviso aviso-exito"><%- icon('palomita', 19) %><div><%= aviso %></div></div>
+    <% } %>
+    <% if (error) { %>
+      <div class="aviso aviso-error"><%- icon('alerta', 19) %><div><%= error %></div></div>
+    <% } %>
+
+    <form method="post" action="/entrar" autocomplete="on">
+      <input type="hidden" name="siguiente" value="<%= siguiente %>">
+
+      <div class="campo">
+        <label for="email">Correo electronico</label>
+        <div class="campo-icono">
+          <%- icon('correo', 18) %>
+          <input type="email" id="email" name="email" value="<%= email %>" required
+                 autocomplete="username" inputmode="email" placeholder="tucorreo@empresa.com" autofocus>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="password">Contrasena</label>
+        <div class="campo-icono">
+          <%- icon('candado', 18) %>
+          <input type="password" id="password" name="password" required
+                 autocomplete="current-password" placeholder="Tu contrasena">
+        </div>
+      </div>
+
+      <button class="btn btn-primario btn-grande btn-bloque" type="submit">
+        <%- icon('salir', 18) %> Entrar
+      </button>
+    </form>
+
+    <div class="acceso-pie">
+      <a href="/recuperar">Olvide mi contrasena</a>
+    </div>
+  </div>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

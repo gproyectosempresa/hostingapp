@@ -1,0 +1,56 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<div class="pagina">
+  <div class="envoltura">
+    <div class="fila-entre mb-2 anim">
+      <div class="fila crece" style="min-width:220px">
+        <a href="/p/<%= project.slug %>" class="btn btn-fantasma"><%- icon('flechaIzq', 18) %></a>
+        <div class="crece" style="min-width:0">
+          <h1 style="font-size:1.1rem;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            <%= doc.original_name %>
+          </h1>
+          <div class="txt-suave txt-chico">
+            <%= project.name %>
+            <% if (doc.rel_folder) { %> &middot; <%= doc.rel_folder %><% } %>
+            &middot; <%= humanSize(doc.size) %>
+          </div>
+        </div>
+      </div>
+      <div class="fila">
+        <a class="btn btn-primario" href="/archivo/<%= doc.id %>?descargar=1">
+          <%- icon('descargar', 17) %> Descargar
+        </a>
+      </div>
+    </div>
+
+    <% if (esPdf) { %>
+      <div class="visor-caja anim anim-1">
+        <iframe src="/archivo/<%= doc.id %>#view=FitH" style="height:80vh" title="<%= doc.original_name %>"></iframe>
+      </div>
+      <p class="txt-suave txt-chico centro mt-2">
+        Si el plano no se ve en tu celular, usa el boton <b>Descargar</b> y abrelo con tu lector de PDF.
+      </p>
+    <% } else if (esImagen) { %>
+      <div class="tarjeta centro anim anim-1">
+        <img src="/archivo/<%= doc.id %>" alt="<%= doc.original_name %>"
+             style="max-width:100%;border-radius:var(--r-m);box-shadow:var(--sombra-m)">
+      </div>
+    <% } else { %>
+      <div class="tarjeta vacio anim anim-1">
+        <div class="vacio-icono"><%- icon('archivo', 32) %></div>
+        <h3>Este archivo se abre en tu computadora</h3>
+        <p>
+          Los archivos <b><%= String(doc.ext || '').replace('.', '').toUpperCase() %></b> se descargan para abrirse
+          con el programa correspondiente (AutoCAD, Tekla, un visor DXF, etc.).
+        </p>
+        <a class="btn btn-primario btn-grande" href="/archivo/<%= doc.id %>?descargar=1">
+          <%- icon('descargar', 18) %> Descargar archivo
+        </a>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/tabbar') %>
+<%- include('partials/foot') %>

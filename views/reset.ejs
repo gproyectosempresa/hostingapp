@@ -1,0 +1,30 @@
+<%- include('partials/head') %>
+<div class="acceso">
+  <div class="acceso-caja">
+    <div class="acceso-logo"><%- icon('candado', 30) %></div>
+    <h1>Nueva contrasena</h1>
+    <p class="lema">Elige una contrasena que recuerdes facilmente.</p>
+
+    <% if (error) { %>
+      <div class="aviso aviso-error"><%- icon('alerta', 19) %><div><%= error %></div></div>
+    <% } %>
+
+    <form method="post" action="/restablecer">
+      <input type="hidden" name="token" value="<%= token %>">
+      <div class="campo">
+        <label for="password">Contrasena nueva</label>
+        <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Minimo 8 caracteres" autofocus>
+      </div>
+      <div class="campo">
+        <label for="password2">Repite la contrasena</label>
+        <input type="password" id="password2" name="password2" required autocomplete="new-password">
+      </div>
+      <button class="btn btn-primario btn-grande btn-bloque" type="submit">
+        <%- icon('palomita', 18) %> Guardar y entrar
+      </button>
+    </form>
+  </div>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

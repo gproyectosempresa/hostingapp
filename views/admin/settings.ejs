@@ -1,0 +1,98 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<div class="pagina">
+  <div class="envoltura-angosta">
+    <%- include('../partials/flash') %>
+
+    <div class="mb-3 anim">
+      <h1 style="margin-bottom:2px">Ajustes</h1>
+      <p class="txt-suave mb-0">Configuracion general de la plataforma.</p>
+    </div>
+
+    <div class="tarjeta mb-2 anim anim-1">
+      <div class="tarjeta-cab">
+        <%- icon('correo', 20) %>
+        <h3 class="crece">Envio de correos</h3>
+        <span class="chip <%= smtp ? 'chip-verde' : 'chip-ambar' %> chip-punto"><%= smtp ? 'Configurado' : 'Sin configurar' %></span>
+      </div>
+
+      <% if (prueba) { %>
+        <div class="aviso aviso-<%= prueba.ok ? 'exito' : 'error' %>">
+          <%- icon(prueba.ok ? 'palomita' : 'alerta', 19) %>
+          <div>
+            <% if (prueba.ok) { %>
+              <b>Conexion correcta</b> El servidor de correo respondio bien. Las invitaciones se enviaran solas.
+            <% } else { %>
+              <b>No se pudo conectar</b> <%= prueba.error %>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
+
+      <p class="txt-chico">
+        Los correos de invitacion y de recuperacion de contrasena salen por SMTP.
+        Se configura en el archivo <span class="mono">.env</span> del servidor:
+      </p>
+      <div class="mono txt-chico" style="background:#f7f9fd;border:1px solid var(--linea);border-radius:11px;padding:12px;line-height:1.9">
+        SMTP_HOST=smtp.hostinger.com<br>
+        SMTP_PORT=465<br>
+        SMTP_SECURE=true<br>
+        SMTP_USER=no-reply@tudominio.com<br>
+        SMTP_PASS=tu-contrasena<br>
+        SMTP_FROM="<%= appName %> &lt;no-reply@tudominio.com&gt;"
+      </div>
+      <p class="txt-chico txt-suave mt-1">
+        Si lo dejas vacio la plataforma sigue funcionando: al invitar a alguien te muestra el enlace
+        para que se lo mandes por WhatsApp.
+      </p>
+      <form method="post" action="/admin/ajustes/probar-correo">
+        <button class="btn btn-linea"><%- icon('refrescar', 16) %> Probar conexion de correo</button>
+      </form>
+    </div>
+
+    <div class="tarjeta mb-2 anim anim-2">
+      <div class="tarjeta-cab"><%- icon('nfc', 20) %><h3 class="crece">Direccion publica</h3></div>
+      <p class="txt-chico">Con esta direccion se generan los enlaces de las etiquetas NFC y los correos:</p>
+      <div class="mono txt-chico" style="background:#f7f9fd;border:1px solid var(--linea);border-radius:11px;padding:12px">
+        <%= appUrl %>
+      </div>
+      <p class="txt-chico txt-suave mt-1 mb-0">
+        Se cambia con la variable <span class="mono">APP_URL</span> del archivo <span class="mono">.env</span>.
+        Si la cambias, los enlaces ya grabados en las etiquetas dejan de funcionar.
+      </p>
+    </div>
+
+    <div class="tarjeta mb-2 anim anim-3">
+      <div class="tarjeta-cab"><%- icon('archivo', 20) %><h3 class="crece">Archivos</h3></div>
+      <div class="rejilla rejilla-2">
+        <div class="metrica">
+          <div class="etq">Tamano maximo por archivo</div>
+          <div class="val"><%= maxMb %> <span>MB</span></div>
+          <div class="icono"><%- icon('subir', 16) %></div>
+        </div>
+        <div class="metrica naranja">
+          <div class="etq">Se guardan en</div>
+          <div class="val" style="font-size:.95rem">storage/projects</div>
+          <div class="icono"><%- icon('carpeta', 16) %></div>
+        </div>
+      </div>
+      <p class="txt-chico txt-suave mt-2 mb-0">
+        Se cambia con <span class="mono">MAX_FILE_MB</span> en el archivo <span class="mono">.env</span>.
+        Respalda de vez en cuando las carpetas <span class="mono">data/</span> y <span class="mono">storage/</span>.
+      </p>
+    </div>
+
+    <div class="tarjeta anim anim-4">
+      <div class="tarjeta-cab"><%- icon('info', 20) %><h3 class="crece">Ayuda rapida</h3></div>
+      <div class="txt-chico">
+        <p><b>Los planos no se vinculan con las piezas.</b> El nombre del archivo debe contener la marca tal como viene en el Excel (V-101, V101, V_101 funcionan igual). Despues de corregir nombres, usa <b>Revincular</b> en el proyecto.</p>
+        <p><b>El modelo 3D no se ve dentro de la pagina.</b> Algunos dominios de Autodesk no permiten incrustarse; en ese caso se muestra un boton que lo abre en pestana nueva.</p>
+        <p class="mb-0"><b>Alguien perdio su contrasena.</b> Puede usar "Olvide mi contrasena" en la pantalla de entrada, o le reenvias la invitacion desde Usuarios.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/tabbar') %>
+<%- include('../partials/foot') %>

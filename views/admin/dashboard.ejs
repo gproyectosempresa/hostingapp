@@ -1,0 +1,111 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<div class="pagina">
+  <div class="envoltura">
+    <%- include('../partials/flash') %>
+
+    <div class="fila-entre mb-3 anim">
+      <div>
+        <h1 style="margin-bottom:2px">Tablero</h1>
+        <p class="txt-suave mb-0">Control de proyectos, planos y avance de fabricacion.</p>
+      </div>
+      <a href="/admin/nuevo" class="btn btn-naranja btn-grande"><%- icon('mas', 18) %> Nuevo proyecto</a>
+    </div>
+
+    <div class="rejilla rejilla-4 mb-3">
+      <div class="metrica anim anim-1">
+        <div class="etq">Proyectos activos</div>
+        <div class="val"><%= stats.activos %> <span>de <%= stats.proyectos %></span></div>
+        <div class="icono"><%- icon('proyectos', 16) %></div>
+      </div>
+      <div class="metrica naranja anim anim-2">
+        <div class="etq">Tonelaje total</div>
+        <div class="val"><%= fmtNum(stats.peso / 1000) %> <span>ton</span></div>
+        <div class="icono"><%- icon('peso', 16) %></div>
+      </div>
+      <div class="metrica verde anim anim-3">
+        <div class="etq">Documentos</div>
+        <div class="val"><%= stats.documentos %></div>
+        <div class="icono"><%- icon('archivo', 16) %></div>
+      </div>
+      <div class="metrica ambar anim anim-4">
+        <div class="etq">Usuarios</div>
+        <div class="val"><%= stats.usuarios %> <% if (stats.pendientes) { %><span><%= stats.pendientes %> por activar</span><% } %></div>
+        <div class="icono"><%- icon('usuarios', 16) %></div>
+      </div>
+    </div>
+
+    <div class="fila-entre mb-2">
+      <h2 style="margin:0">Proyectos</h2>
+      <a href="/admin/enlaces" class="btn btn-suave btn-chico"><%- icon('nfc', 15) %> Ver todos los enlaces NFC</a>
+    </div>
+
+    <% if (!projects.length) { %>
+      <div class="tarjeta vacio anim">
+        <div class="vacio-icono"><%- icon('proyectos', 32) %></div>
+        <h3>Empieza dando de alta tu primer proyecto</h3>
+        <p>Sube la carpeta de planos, el listado de piezas en Excel y el link del visor de Autodesk. La plataforma genera sola la pagina y el enlace para tu etiqueta NFC.</p>
+        <a href="/admin/nuevo" class="btn btn-primario btn-grande"><%- icon('mas', 18) %> Dar de alta un proyecto</a>
+      </div>
+    <% } else { %>
+      <div class="rejilla rejilla-3">
+        <% projects.forEach(function (p, i) {
+             const chip = p.status === 'activo' ? 'chip-verde' : (p.status === 'pausado' ? 'chip-ambar' : 'chip-gris');
+        %>
+        <div class="tarjeta anim anim-<%= Math.min(i + 1, 6) %>">
+          <div style="height:5px;border-radius:999px;background:<%= p.color %>;margin:-4px 0 12px"></div>
+          <div class="fila-entre mb-1" style="gap:6px">
+            <span class="chip <%= chip %> chip-punto"><%= p.status %></span>
+            <% if (p.code) { %><span class="chip chip-gris"><%= p.code %></span><% } %>
+          </div>
+          <h3 style="margin-bottom:3px"><a href="/admin/proyecto/<%= p.id %>" style="color:inherit"><%= p.name %></a></h3>
+          <div class="txt-suave txt-chico mb-2"><%= p.client || 'Sin cliente' %></div>
+
+          <div class="fila-entre txt-chico mb-1">
+            <span class="negrita">Avance</span>
+            <span class="txt-suave"><%= p.avance %>%</span>
+          </div>
+          <div class="barra verde mb-2"><i style="width:<%= p.avance %>%"></i></div>
+
+          <div class="fila txt-chico txt-suave" style="gap:14px;flex-wrap:wrap">
+            <span><%- icon('lista', 13) %> <%= p.n_piezas %> piezas</span>
+            <span><%- icon('archivo', 13) %> <%= p.n_docs %></span>
+            <span><%- icon('peso', 13) %> <%= fmtKg(p.peso) %> kg</span>
+          </div>
+
+          <hr class="sep" style="margin:14px 0">
+
+          <div class="fila" style="gap:6px;flex-wrap:wrap">
+            <a href="/admin/proyecto/<%= p.id %>" class="btn btn-suave btn-chico"><%- icon('ajustes', 14) %> Administrar</a>
+            <a href="/p/<%= p.slug %>" class="btn btn-linea btn-chico"><%- icon('ojo', 14) %> Ver</a>
+            <button class="btn btn-linea btn-chico copiar" data-link="<%= p.link %>"><%- icon('copiar', 14) %> Copiar link</button>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <% if (actividad.length) { %>
+      <h2 class="mt-3 mb-2">Movimientos recientes</h2>
+      <div class="tarjeta compacta">
+        <% actividad.forEach(function (a) { %>
+          <div class="fila" style="padding:9px 4px;border-bottom:1px solid var(--linea)">
+            <span class="chip chip-gris"><%= a.action %></span>
+            <div class="crece txt-chico">
+              <b class="txt-tinta"><%= a.user_name || 'Sistema' %></b>
+              <%= a.detail || '' %>
+              <% if (a.project_name) { %>
+                &middot; <a href="/admin/proyecto/<%= a.project_id %>"><%= a.project_name %></a>
+              <% } %>
+            </div>
+            <span class="txt-suave txt-chico nowrap"><%= fmtDate(a.created_at) %></span>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/tabbar') %>
+<%- include('../partials/foot') %>

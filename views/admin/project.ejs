@@ -1,0 +1,387 @@
+<%
+  function claseDoc(ext) {
+    const e = String(ext || '').toLowerCase();
+    if (e === '.pdf') return 'doc-pdf';
+    if (e === '.dxf') return 'doc-dxf';
+    if (e === '.dwg' || e === '.dwf') return 'doc-dwg';
+    if (['.png', '.jpg', '.jpeg', '.gif', '.svg'].includes(e)) return 'doc-img';
+    if (['.ifc', '.rvt', '.nwd', '.nwc', '.step', '.stp', '.sat', '.3dm'].includes(e)) return 'doc-3d';
+    return 'doc-otro';
+  }
+%>
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<div class="pagina">
+  <div class="envoltura">
+    <%- include('../partials/flash') %>
+
+    <div class="fila mb-2 anim">
+      <a href="/admin" class="btn btn-fantasma"><%- icon('flechaIzq', 18) %></a>
+      <div class="crece" style="min-width:0">
+        <div class="fila" style="gap:7px;flex-wrap:wrap">
+          <span class="chip <%= project.status === 'activo' ? 'chip-verde' : (project.status === 'pausado' ? 'chip-ambar' : 'chip-gris') %> chip-punto"><%= project.status %></span>
+          <% if (project.code) { %><span class="chip chip-gris"><%= project.code %></span><% } %>
+        </div>
+        <h1 style="margin:4px 0 2px"><%= project.name %></h1>
+        <p class="txt-suave mb-0 txt-chico"><%= project.client || 'Sin cliente' %><% if (project.location) { %> &middot; <%= project.location %><% } %></p>
+      </div>
+      <a href="/p/<%= project.slug %>" class="btn btn-suave nowrap"><%- icon('ojo', 17) %> Ver como usuario</a>
+    </div>
+
+    <% if (nuevo) { %>
+      <div class="aviso aviso-exito">
+        <%- icon('palomita', 19) %>
+        <div><b>Proyecto creado</b> Ya puedes copiar el enlace de abajo y grabarlo en tu etiqueta NFC.</div>
+      </div>
+    <% } %>
+
+    <!-- ============================== NFC ============================== -->
+    <div class="rejilla rejilla-2 mb-3" id="nfc">
+      <div class="caja-link anim anim-1">
+        <div class="fila" style="gap:9px">
+          <%- icon('nfc', 22) %>
+          <b style="font-size:1.05rem">Enlace para la etiqueta NFC</b>
+        </div>
+        <div class="link-valor" id="linkNfc"><%= link %></div>
+        <div class="fila" style="flex-wrap:wrap;gap:8px">
+          <button class="btn btn-copiar copiar" data-link="<%= link %>"><%- icon('copiar', 16) %> Copiar enlace</button>
+          <a class="btn btn-linea" href="/admin/proyecto/<%= project.id %>/qr.png" download="qr-<%= project.slug %>.png"
+             style="background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25);color:#fff">
+            <%- icon('descargar', 16) %> Descargar QR
+          </a>
+        </div>
+        <div class="txt-chico mt-2" style="opacity:.8">
+          Graba el enlace como registro <b>URL</b> con NFC Tools o TagWriter. Al acercar el celular,
+          el operador entra a esta pagina; si no ha iniciado sesion se le pide primero su correo y contrasena.
+        </div>
+      </div>
+
+      <div class="tarjeta centro anim anim-2">
+        <div class="qr-caja">
+          <img src="/admin/proyecto/<%= project.id %>/qr.png" alt="Codigo QR del proyecto" loading="lazy">
+        </div>
+        <p class="txt-suave txt-chico mt-2 mb-0">
+          Pega este QR junto a la etiqueta NFC para los celulares que no tengan NFC.
+        </p>
+      </div>
+    </div>
+
+    <div class="rejilla rejilla-4 mb-3">
+      <div class="metrica"><div class="etq">Piezas</div><div class="val"><%= stats.renglones %> <span><%= fmtNum(stats.piezas) %> pzas</span></div><div class="icono"><%- icon('lista', 16) %></div></div>
+      <div class="metrica naranja"><div class="etq">Peso total</div><div class="val"><%= fmtKg(stats.peso) %> <span>kg</span></div><div class="icono"><%- icon('peso', 16) %></div></div>
+      <div class="metrica verde"><div class="etq">Avance</div><div class="val"><%= stats.avance %>% <span><%= stats.completas %> listas</span></div><div class="icono"><%- icon('palomita', 16) %></div></div>
+      <div class="metrica ambar"><div class="etq">Documentos</div><div class="val"><%= stats.docs %></div><div class="icono"><%- icon('archivo', 16) %></div></div>
+    </div>
+
+    <!-- ============================ PESTANAS ============================ -->
+    <div class="pestanas anim anim-3" id="pestanas">
+      <button class="pestana activa" data-panel="documentos"><%- icon('carpeta', 16) %> Documentos <span class="cuenta"><%= docs.length %></span></button>
+      <button class="pestana" data-panel="piezas"><%- icon('lista', 16) %> Piezas <span class="cuenta"><%= pieces.length %></span></button>
+      <button class="pestana" data-panel="datos"><%- icon('ajustes', 16) %> Datos</button>
+      <button class="pestana" data-panel="actividad"><%- icon('reloj', 16) %> Actividad</button>
+    </div>
+
+    <!-- ========================== DOCUMENTOS ========================== -->
+    <div class="panel activo" id="panel-documentos">
+      <div class="tarjeta mb-2">
+        <div class="tarjeta-cab"><%- icon('subir', 20) %><h3 class="crece">Agregar mas archivos</h3></div>
+        <form method="post" action="/admin/proyecto/<%= project.id %>/documentos" enctype="multipart/form-data" id="formDocs">
+          <div class="rejilla rejilla-2">
+            <div>
+              <div class="zona" id="zonaCarpeta">
+                <input type="file" id="inputCarpeta" webkitdirectory directory multiple>
+                <div class="zona-icono"><%- icon('carpeta', 22) %></div>
+                <b>Subir una carpeta</b>
+                <small>Planos PDF, DXF, DWG e imagenes</small>
+              </div>
+              <div class="fila mt-1" style="gap:8px">
+                <button type="button" class="btn btn-linea btn-chico" id="btnArchivosSueltos"><%- icon('archivo', 14) %> Archivos sueltos</button>
+                <input type="file" id="inputSueltos" multiple class="oculto">
+                <span class="txt-suave txt-chico" id="resumenCarpeta"></span>
+              </div>
+            </div>
+            <div>
+              <div class="zona naranja" id="zonaSoldadura">
+                <input type="file" id="inputSoldadura" multiple accept=".pdf,.doc,.docx,.jpg,.png">
+                <div class="zona-icono"><%- icon('flama', 22) %></div>
+                <b>Especificaciones de soldadura</b>
+                <small>Se guardan en la pestana de soldadura</small>
+              </div>
+            </div>
+          </div>
+          <div class="lista-archivos" id="listaCarpeta"></div>
+          <div class="lista-archivos" id="listaSoldadura"></div>
+
+          <div class="fila-entre mt-2">
+            <div class="campo" style="margin:0;min-width:210px">
+              <label for="categoria" style="font-size:.78rem">Clasificar la carpeta como</label>
+              <select name="categoria" id="categoria">
+                <option value="auto">Automatico (recomendado)</option>
+                <option value="plano">Planos</option>
+                <option value="soldadura">Soldadura</option>
+                <option value="modelo">Modelos 3D</option>
+                <option value="general">Otros</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primario" id="btnGuardar"><%- icon('subir', 17) %> Subir archivos</button>
+          </div>
+        </form>
+
+        <div class="oculto mt-2" id="cajaProgreso">
+          <div class="fila mb-1" style="gap:10px">
+            <span class="girando" style="color:var(--azul-500)"><%- icon('refrescar', 18) %></span>
+            <b class="crece txt-tinta" id="textoProgreso">Subiendo archivos...</b>
+            <span class="negrita txt-tinta" id="porcentaje">0%</span>
+          </div>
+          <div class="barra"><i id="barraProgreso"></i></div>
+        </div>
+      </div>
+
+      <% if (sinVinculo) { %>
+        <div class="aviso aviso-aviso">
+          <%- icon('alerta', 19) %>
+          <div class="crece">
+            <b><%= sinVinculo %> plano(s) sin pieza vinculada</b>
+            Revisa que el nombre del archivo contenga la marca de la pieza (por ejemplo <span class="mono">V-101.pdf</span>).
+          </div>
+          <form method="post" action="/admin/proyecto/<%= project.id %>/revincular">
+            <button class="btn btn-linea btn-chico"><%- icon('refrescar', 14) %> Revincular</button>
+          </form>
+        </div>
+      <% } %>
+
+      <% if (!docs.length) { %>
+        <div class="tarjeta vacio">
+          <div class="vacio-icono"><%- icon('carpeta', 32) %></div>
+          <h3>Sin documentos</h3>
+          <p>Sube la carpeta de planos del proyecto para que aparezca en el celular de los operadores.</p>
+        </div>
+      <% } else { %>
+        <div class="buscador">
+          <%- icon('buscar', 18) %>
+          <input type="search" id="buscarDoc" placeholder="Buscar archivo..." autocomplete="off">
+        </div>
+        <div id="listaDocs">
+          <% docs.forEach(function (d) { %>
+            <div class="doc" data-buscar="<%= (d.original_name + ' ' + (d.rel_folder || '')).toLowerCase() %>">
+              <span class="doc-icono <%= claseDoc(d.ext) %>"><%= String(d.ext || '').replace('.', '') %></span>
+              <span class="doc-datos">
+                <span class="doc-nombre"><%= d.original_name %></span>
+                <span class="doc-meta">
+                  <span class="chip <%= d.category === 'soldadura' ? 'chip-naranja' : (d.category === 'modelo' ? 'chip-ambar' : 'chip-gris') %>"><%= d.category %></span>
+                  <% if (d.rel_folder) { %><span><%= d.rel_folder %></span><% } %>
+                  <span><%= humanSize(d.size) %></span>
+                  <% if (d.category === 'plano') { %>
+                    <span class="<%= d.n_piezas ? 'chip chip-verde' : 'chip chip-rojo' %>">
+                      <%= d.n_piezas ? d.n_piezas + ' pieza(s)' : 'sin vincular' %>
+                    </span>
+                  <% } %>
+                </span>
+              </span>
+              <span class="fila" style="gap:4px">
+                <a class="btn btn-fantasma" href="/ver/<%= d.id %>" title="Ver"><%- icon('ojo', 17) %></a>
+                <form method="post" action="/admin/documento/<%= d.id %>/eliminar" class="confirmar"
+                      data-confirmar="Eliminar el archivo <%= d.original_name %>?">
+                  <button class="btn btn-fantasma" title="Eliminar" style="color:var(--rojo)"><%- icon('bote', 17) %></button>
+                </form>
+              </span>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- ============================ PIEZAS ============================ -->
+    <div class="panel" id="panel-piezas">
+      <div class="tarjeta mb-2">
+        <div class="tarjeta-cab"><%- icon('lista', 20) %><h3 class="crece">Importar listado de piezas</h3></div>
+        <form method="post" action="/admin/proyecto/<%= project.id %>/piezas" enctype="multipart/form-data">
+          <div class="zona" id="zonaPiezas">
+            <input type="file" name="piezas" id="inputPiezas" accept=".xlsx,.xls,.csv,.txt" required>
+            <div class="zona-icono"><%- icon('lista', 22) %></div>
+            <b>Sube el Excel o CSV de piezas</b>
+            <small>Columnas: Marca, Descripcion, Perfil, Material, Cantidad, Peso unitario, Peso total, Lote</small>
+          </div>
+          <div class="lista-archivos" id="listaPiezasArchivo"></div>
+          <div class="fila-entre mt-2">
+            <div class="campo" style="margin:0;min-width:230px">
+              <label for="modo" style="font-size:.78rem">Al importar</label>
+              <select name="modo" id="modo">
+                <option value="reemplazar">Reemplazar todo el listado</option>
+                <option value="agregar">Agregar / actualizar piezas</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primario"><%- icon('subir', 17) %> Importar piezas</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="tarjeta mb-2" id="checklist">
+        <div class="tarjeta-cab"><%- icon('palomita', 20) %><h3 class="crece">Etapas del checklist</h3></div>
+        <form method="post" action="/admin/proyecto/<%= project.id %>/etapas">
+          <div class="fila" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div class="campo crece" style="margin:0;min-width:240px">
+              <input type="text" name="stages" value="<%= stages.join(', ') %>" placeholder="Fabricado">
+              <small class="ayuda">Separa con comas. Cada pieza tendra una casilla por etapa.</small>
+            </div>
+            <button class="btn btn-linea"><%- icon('palomita', 16) %> Guardar etapas</button>
+          </div>
+        </form>
+      </div>
+
+      <% if (!pieces.length) { %>
+        <div class="tarjeta vacio">
+          <div class="vacio-icono"><%- icon('lista', 32) %></div>
+          <h3>Sin piezas cargadas</h3>
+          <p>Importa el Excel del proyecto para armar el checklist de fabricacion.</p>
+        </div>
+      <% } else { %>
+        <div class="buscador">
+          <%- icon('buscar', 18) %>
+          <input type="search" id="buscarPiezaAdmin" placeholder="Buscar pieza..." autocomplete="off">
+        </div>
+        <div class="tabla-marco">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>Marca</th><th>Descripcion</th><th>Perfil</th><th>Material</th>
+                <th class="num">Cant</th><th class="num">Unitario</th><th class="num">Total kg</th>
+                <th>Lote</th><th class="num">Planos</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="tablaPiezas">
+              <% pieces.forEach(function (p) { %>
+                <tr data-buscar="<%= (p.mark + ' ' + (p.description || '') + ' ' + (p.profile || '') + ' ' + (p.lot || '')).toLowerCase() %>">
+                  <td class="marca-celda"><%= p.mark %></td>
+                  <td><%= p.description || '' %></td>
+                  <td><%= p.profile || '' %></td>
+                  <td><%= p.material || '' %></td>
+                  <td class="num"><%= fmtNum(p.qty) %></td>
+                  <td class="num"><%= fmtKg(p.unit_weight) %></td>
+                  <td class="num negrita"><%= fmtKg(p.total_weight) %></td>
+                  <td><%= p.lot || '' %></td>
+                  <td class="num">
+                    <span class="chip <%= p.n_docs ? 'chip-verde' : 'chip-gris' %>"><%= p.n_docs %></span>
+                  </td>
+                  <td>
+                    <form method="post" action="/admin/pieza/<%= p.id %>/eliminar" class="confirmar"
+                          data-confirmar="Eliminar la pieza <%= p.mark %>?">
+                      <button class="btn btn-fantasma" style="color:var(--rojo)" title="Eliminar"><%- icon('bote', 15) %></button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <div class="fila mt-2">
+          <a class="btn btn-linea btn-chico" href="/p/<%= project.slug %>/avance.csv"><%- icon('descargar', 15) %> Descargar avance</a>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- ============================ DATOS ============================ -->
+    <div class="panel" id="panel-datos">
+      <form method="post" action="/admin/proyecto/<%= project.id %>/editar">
+        <div class="tarjeta mb-2">
+          <div class="tarjeta-cab"><%- icon('edificio', 20) %><h3 class="crece">Datos del proyecto</h3></div>
+          <div class="campo">
+            <label for="name">Nombre *</label>
+            <input type="text" id="name" name="name" value="<%= project.name %>" required>
+          </div>
+          <div class="fila-campos dos">
+            <div class="campo"><label for="code">Codigo</label>
+              <input type="text" id="code" name="code" value="<%= project.code || '' %>"></div>
+            <div class="campo"><label for="client">Cliente</label>
+              <input type="text" id="client" name="client" value="<%= project.client || '' %>"></div>
+          </div>
+          <div class="campo"><label for="location">Ubicacion</label>
+            <input type="text" id="location" name="location" value="<%= project.location || '' %>"></div>
+          <div class="fila-campos tres">
+            <div class="campo"><label for="start_date">Inicio</label>
+              <input type="date" id="start_date" name="start_date" value="<%= project.start_date || '' %>"></div>
+            <div class="campo"><label for="due_date">Entrega</label>
+              <input type="date" id="due_date" name="due_date" value="<%= project.due_date || '' %>"></div>
+            <div class="campo"><label for="status">Estado</label>
+              <select id="status" name="status">
+                <option value="activo" <%= project.status === 'activo' ? 'selected' : '' %>>Activo</option>
+                <option value="pausado" <%= project.status === 'pausado' ? 'selected' : '' %>>Pausado</option>
+                <option value="terminado" <%= project.status === 'terminado' ? 'selected' : '' %>>Terminado</option>
+              </select></div>
+          </div>
+          <div class="campo"><label for="description">Notas para piso</label>
+            <textarea id="description" name="description"><%= project.description || '' %></textarea></div>
+          <div class="fila" style="gap:14px;align-items:flex-end">
+            <div class="campo" style="margin:0"><label for="color">Color</label>
+              <input type="color" id="color" name="color" value="<%= project.color %>"></div>
+            <div class="campo crece" style="margin:0"><label for="slug">Direccion web</label>
+              <input type="text" id="slug" name="slug" value="<%= project.slug %>">
+              <small class="ayuda">Si la cambias, el enlace grabado en la NFC deja de funcionar.</small></div>
+          </div>
+        </div>
+
+        <div class="tarjeta mb-2">
+          <div class="tarjeta-cab"><%- icon('cubo', 20) %><h3 class="crece">Modelo 3D (Autodesk)</h3></div>
+          <div class="campo">
+            <label for="viewer_url">Link de visualizacion</label>
+            <div class="campo-icono">
+              <%- icon('externo', 18) %>
+              <input type="url" id="viewer_url" name="viewer_url" value="<%= project.viewer_url || '' %>"
+                     placeholder="https://autodesk360.com/shares/public/...">
+            </div>
+            <% if (viewer) { %>
+              <small class="ayuda">
+                <% if (viewer.embeddable) { %>
+                  <span class="chip chip-verde">Se muestra dentro de la pagina</span>
+                <% } else { %>
+                  <span class="chip chip-ambar">Se abre en pestana nueva</span>
+                  Este dominio (<%= viewer.host %>) no permite incrustarse.
+                <% } %>
+              </small>
+            <% } %>
+          </div>
+        </div>
+
+        <button class="btn btn-primario btn-grande"><%- icon('palomita', 18) %> Guardar cambios</button>
+      </form>
+
+      <div class="tarjeta mt-3" id="peligro" style="border-color:#f7cbc9">
+        <div class="tarjeta-cab" style="color:var(--rojo)"><%- icon('alerta', 20) %><h3 class="crece" style="color:var(--rojo)">Eliminar proyecto</h3></div>
+        <p class="txt-chico">
+          Se borran las piezas, el checklist, la actividad y todos los archivos subidos. Esta accion no se puede deshacer.
+          Para confirmar escribe <span class="mono negrita"><%= project.slug %></span>.
+        </p>
+        <form method="post" action="/admin/proyecto/<%= project.id %>/eliminar" class="fila" style="gap:10px;flex-wrap:wrap">
+          <input type="text" name="confirmacion" placeholder="<%= project.slug %>" class="crece" style="min-width:200px" required>
+          <button class="btn btn-peligro"><%- icon('bote', 16) %> Eliminar definitivamente</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ========================== ACTIVIDAD ========================== -->
+    <div class="panel" id="panel-actividad">
+      <div class="tarjeta">
+        <div class="tarjeta-cab"><%- icon('reloj', 20) %><h3 class="crece">Ultimos movimientos</h3></div>
+        <% if (!actividad.length) { %>
+          <p class="txt-suave txt-chico mb-0">Todavia no hay movimientos registrados.</p>
+        <% } else { %>
+          <% actividad.forEach(function (a) { %>
+            <div class="fila" style="padding:9px 2px;border-bottom:1px solid var(--linea)">
+              <span class="chip chip-gris"><%= a.action %></span>
+              <div class="crece txt-chico">
+                <b class="txt-tinta"><%= a.user_name || 'Sistema' %></b> <%= a.detail || '' %>
+              </div>
+              <span class="txt-suave txt-chico nowrap"><%= fmtDate(a.created_at) %></span>
+            </div>
+          <% }) %>
+        <% } %>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<%- include('../partials/tabbar') %>
+<script src="/static/js/subida.js"></script>
+<%- include('../partials/foot') %>

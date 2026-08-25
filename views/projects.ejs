@@ -1,0 +1,64 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<div class="pagina">
+  <div class="envoltura">
+    <%- include('partials/flash') %>
+
+    <div class="fila-entre mb-3 anim">
+      <div>
+        <h1 style="margin-bottom:2px">Hola, <%= String(user.name).split(' ')[0] %></h1>
+        <p class="txt-suave mb-0">Estos son los proyectos a los que tienes acceso.</p>
+      </div>
+      <% if (user.role === 'admin') { %>
+        <a href="/admin" class="btn btn-suave"><%- icon('tablero', 17) %> Ir al tablero</a>
+      <% } %>
+    </div>
+
+    <% if (!projects.length) { %>
+      <div class="tarjeta vacio anim anim-1">
+        <div class="vacio-icono"><%- icon('proyectos', 32) %></div>
+        <h3>Aun no hay proyectos</h3>
+        <p>Cuando el administrador de de alta un proyecto lo veras aqui. Tambien puedes acercar tu celular a la etiqueta NFC del proyecto en piso.</p>
+      </div>
+    <% } else { %>
+      <div class="rejilla rejilla-3">
+        <% projects.forEach(function (p, i) {
+             const chip = p.status === 'activo' ? 'chip-verde' : (p.status === 'pausado' ? 'chip-ambar' : 'chip-gris');
+        %>
+        <a class="tarjeta tarjeta-enlace anim anim-<%= Math.min(i + 1, 6) %>" href="/p/<%= p.slug %>">
+          <div style="height:5px;border-radius:999px;background:<%= p.color %>;margin:-4px 0 12px"></div>
+          <div class="fila-entre mb-1" style="gap:8px">
+            <span class="chip <%= chip %> chip-punto"><%= p.status %></span>
+            <% if (p.code) { %><span class="chip chip-gris"><%= p.code %></span><% } %>
+          </div>
+          <h3 style="margin-bottom:3px"><%= p.name %></h3>
+          <div class="txt-suave txt-chico mb-2">
+            <%= p.client || 'Sin cliente' %><% if (p.location) { %> &middot; <%= p.location %><% } %>
+          </div>
+          <div class="fila" style="gap:16px;flex-wrap:wrap">
+            <div>
+              <div class="txt-suave" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Piezas</div>
+              <div class="negrita txt-tinta"><%= fmtNum(p.n_piezas) %></div>
+            </div>
+            <div>
+              <div class="txt-suave" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Peso</div>
+              <div class="negrita txt-tinta"><%= fmtKg(p.peso) %> kg</div>
+            </div>
+            <div>
+              <div class="txt-suave" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Docs</div>
+              <div class="negrita txt-tinta"><%= p.n_docs %></div>
+            </div>
+          </div>
+          <div class="fila mt-2" style="gap:8px;color:var(--azul-500);font-weight:700;font-size:.86rem">
+            Abrir proyecto <%- icon('flecha', 15, 'style="transform:rotate(-90deg)"') %>
+          </div>
+        </a>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/tabbar') %>
+<%- include('partials/foot') %>

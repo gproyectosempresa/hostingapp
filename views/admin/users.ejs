@@ -1,0 +1,148 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<div class="pagina">
+  <div class="envoltura">
+    <%- include('../partials/flash') %>
+
+    <div class="fila-entre mb-3 anim">
+      <div>
+        <h1 style="margin-bottom:2px">Usuarios</h1>
+        <p class="txt-suave mb-0">Da de alta a tu gente: reciben un correo y ellos crean su contrasena.</p>
+      </div>
+      <% if (!smtp) { %>
+        <span class="chip chip-ambar"><%- icon('alerta', 13) %> Correo no configurado</span>
+      <% } else { %>
+        <span class="chip chip-verde"><%- icon('correo', 13) %> Correo activo</span>
+      <% } %>
+    </div>
+
+    <% if (invite) { %>
+      <div class="tarjeta mb-3 anim" style="border-color:var(--azul-100);background:var(--azul-50)">
+        <div class="tarjeta-cab">
+          <%- icon('nfc', 20) %>
+          <h3 class="crece">Invitacion de <%= invite.name %></h3>
+          <span class="chip <%= invite.enviado ? 'chip-verde' : 'chip-ambar' %>">
+            <%= invite.enviado ? 'Correo enviado' : 'Enviar a mano' %>
+          </span>
+        </div>
+        <p class="txt-chico mb-1">
+          <% if (invite.enviado) { %>
+            Se envio el correo a <b><%= invite.email %></b>. Si no lo encuentra, puede estar en spam:
+            tambien puedes mandarle este enlace directo.
+          <% } else { %>
+            Copia este enlace y mandaselo a <b><%= invite.email %></b> por WhatsApp o como prefieras.
+            Es personal y vence en 7 dias.
+          <% } %>
+        </p>
+        <div class="mono txt-chico" style="word-break:break-all;background:#fff;border:1px solid var(--linea);border-radius:10px;padding:10px"><%= invite.link %></div>
+        <div class="fila mt-2">
+          <button class="btn btn-primario btn-chico copiar" data-link="<%= invite.link %>"><%- icon('copiar', 14) %> Copiar enlace</button>
+        </div>
+      </div>
+    <% } %>
+
+    <div class="rejilla rejilla-2 mb-3">
+      <div class="tarjeta anim anim-1">
+        <div class="tarjeta-cab"><%- icon('mas', 20) %><h3 class="crece">Dar de alta un usuario</h3></div>
+        <form method="post" action="/admin/usuarios/invitar">
+          <div class="campo">
+            <label for="name">Nombre completo *</label>
+            <input type="text" id="name" name="name" required placeholder="Juan Perez">
+          </div>
+          <div class="campo">
+            <label for="email">Correo electronico *</label>
+            <div class="campo-icono">
+              <%- icon('correo', 18) %>
+              <input type="email" id="email" name="email" required inputmode="email" placeholder="juan@empresa.com">
+            </div>
+          </div>
+          <div class="fila-campos dos">
+            <div class="campo">
+              <label for="position">Puesto</label>
+              <input type="text" id="position" name="position" placeholder="Supervisor de taller">
+            </div>
+            <div class="campo">
+              <label for="role">Tipo de cuenta</label>
+              <select id="role" name="role">
+                <option value="user">Usuario (consulta y checklist)</option>
+                <option value="admin">Administrador (todo)</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primario btn-bloque"><%- icon('correo', 17) %> Enviar invitacion</button>
+        </form>
+      </div>
+
+      <div class="tarjeta anim anim-2">
+        <div class="tarjeta-cab"><%- icon('info', 20) %><h3 class="crece">Como funciona</h3></div>
+        <div class="txt-chico">
+          <p><b>1.</b> Escribes el nombre y correo de la persona.</p>
+          <p><b>2.</b> Le llega un correo con un enlace personal para crear su contrasena. Si el envio de correos no esta configurado, aqui mismo te aparece el enlace para copiarlo.</p>
+          <p><b>3.</b> Cuando entra, ya puede acercar su celular a la etiqueta NFC y ver planos, piezas y marcar el checklist.</p>
+          <hr class="sep">
+          <p class="mb-0">
+            <b>Usuario:</b> ve los proyectos, abre planos y marca el checklist.<br>
+            <b>Administrador:</b> ademas da de alta proyectos, sube archivos y administra usuarios.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="anim anim-3">
+      <h2 class="mb-2">Personal registrado (<%= users.length %>)</h2>
+      <div class="tabla-marco">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Nombre</th><th>Correo</th><th>Puesto</th><th>Tipo</th><th>Estado</th>
+              <th>Ultimo acceso</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% users.forEach(function (u) { %>
+              <tr>
+                <td class="marca-celda"><%= u.name %></td>
+                <td><%= u.email %></td>
+                <td><%= u.position || '' %></td>
+                <td>
+                  <span class="chip <%= u.role === 'admin' ? 'chip-naranja' : 'chip-gris' %>">
+                    <%= u.role === 'admin' ? 'Admin' : 'Usuario' %>
+                  </span>
+                </td>
+                <td>
+                  <span class="chip <%= u.status === 'activo' ? 'chip-verde' : (u.status === 'invitado' ? 'chip-ambar' : 'chip-rojo') %> chip-punto">
+                    <%= u.status %>
+                  </span>
+                </td>
+                <td class="txt-chico txt-suave nowrap"><%= u.last_login ? fmtDate(u.last_login) : 'Nunca' %></td>
+                <td>
+                  <div class="fila" style="gap:3px">
+                    <form method="post" action="/admin/usuarios/<%= u.id %>/reenviar">
+                      <button class="btn btn-fantasma" title="Reenviar invitacion"><%- icon('correo', 16) %></button>
+                    </form>
+                    <form method="post" action="/admin/usuarios/<%= u.id %>/rol" class="confirmar"
+                          data-confirmar="Cambiar el tipo de cuenta de <%= u.name %>?">
+                      <button class="btn btn-fantasma" title="Cambiar tipo de cuenta"><%- icon('usuarios', 16) %></button>
+                    </form>
+                    <form method="post" action="/admin/usuarios/<%= u.id %>/estado" class="confirmar"
+                          data-confirmar="<%= u.status === 'activo' ? 'Desactivar' : 'Activar' %> a <%= u.name %>?">
+                      <button class="btn btn-fantasma" title="Activar / desactivar"><%- icon('candado', 16) %></button>
+                    </form>
+                    <form method="post" action="/admin/usuarios/<%= u.id %>/eliminar" class="confirmar"
+                          data-confirmar="Eliminar definitivamente a <%= u.name %>?">
+                      <button class="btn btn-fantasma" style="color:var(--rojo)" title="Eliminar"><%- icon('bote', 16) %></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/tabbar') %>
+<%- include('../partials/foot') %>

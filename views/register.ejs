@@ -1,0 +1,49 @@
+<%- include('partials/head') %>
+<div class="acceso">
+  <div class="acceso-caja" style="max-width:470px">
+    <div class="acceso-logo"><%- icon('usuario', 30) %></div>
+    <h1>Crea tu contrasena</h1>
+    <p class="lema">Hola <b><%= user.name %></b>, activa tu acceso a los proyectos.</p>
+
+    <% if (error) { %>
+      <div class="aviso aviso-error"><%- icon('alerta', 19) %><div><%= error %></div></div>
+    <% } %>
+
+    <form method="post" action="/registro">
+      <input type="hidden" name="token" value="<%= token %>">
+
+      <div class="campo">
+        <label>Correo</label>
+        <input type="email" value="<%= user.email %>" disabled style="background:#f7f9fd;color:#6b7a99">
+      </div>
+      <div class="fila-campos dos">
+        <div class="campo">
+          <label for="name">Nombre completo</label>
+          <input type="text" id="name" name="name" value="<%= user.name %>" required>
+        </div>
+        <div class="campo">
+          <label for="phone">Celular <span class="txt-suave">(opcional)</span></label>
+          <input type="text" id="phone" name="phone" inputmode="tel" placeholder="55 1234 5678">
+        </div>
+      </div>
+      <div class="fila-campos dos">
+        <div class="campo">
+          <label for="password">Contrasena</label>
+          <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Minimo 8 caracteres">
+        </div>
+        <div class="campo">
+          <label for="password2">Repite la contrasena</label>
+          <input type="password" id="password2" name="password2" required autocomplete="new-password">
+        </div>
+      </div>
+      <small class="ayuda mb-2" style="display:block">Debe tener al menos 8 caracteres, con letras y numeros.</small>
+
+      <button class="btn btn-primario btn-grande btn-bloque" type="submit">
+        <%- icon('palomita', 18) %> Activar mi cuenta
+      </button>
+    </form>
+  </div>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

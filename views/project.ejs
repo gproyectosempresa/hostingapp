@@ -1,0 +1,378 @@
+<%
+  function claseDoc(ext) {
+    const e = String(ext || '').toLowerCase();
+    if (e === '.pdf') return 'doc-pdf';
+    if (e === '.dxf') return 'doc-dxf';
+    if (e === '.dwg' || e === '.dwf') return 'doc-dwg';
+    if (['.png', '.jpg', '.jpeg', '.gif', '.svg'].includes(e)) return 'doc-img';
+    if (['.ifc', '.rvt', '.nwd', '.nwc', '.step', '.stp', '.sat', '.3dm'].includes(e)) return 'doc-3d';
+    return 'doc-otro';
+  }
+  function etqDoc(ext) { return String(ext || '').replace('.', '') || 'file'; }
+  const estadoChip = project.status === 'activo' ? 'chip-verde' : (project.status === 'pausado' ? 'chip-ambar' : 'chip-gris');
+%>
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+
+<%# La palomita del checklist se define una sola vez y se reutiliza en cada
+    casilla. Con listas de cientos de piezas esto ahorra mucho peso de pagina. %>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 6L9 17l-5-5"/>
+  </symbol>
+</svg>
+
+<div class="pagina">
+  <div class="envoltura">
+
+    <%- include('partials/flash') %>
+
+    <!-- ---------------------------- ENCABEZADO ---------------------------- -->
+    <div class="hero anim" style="background:linear-gradient(135deg,<%= project.color %> 0%,#12213f 130%)">
+      <div class="fila-entre" style="align-items:flex-start">
+        <div class="crece" style="min-width:200px">
+          <div class="fila" style="gap:7px;margin-bottom:8px;flex-wrap:wrap">
+            <span class="chip <%= estadoChip %> chip-punto"><%= project.status %></span>
+            <% if (project.code) { %><span class="chip"><%= project.code %></span><% } %>
+          </div>
+          <h1><%= project.name %></h1>
+          <div class="sub">
+            <% if (project.client) { %><%= project.client %><% } %>
+            <% if (project.client && project.location) { %> &middot; <% } %>
+            <% if (project.location) { %><%= project.location %><% } %>
+          </div>
+        </div>
+        <div class="anillo" style="flex:0 0 74px">
+          <svg viewBox="0 0 74 74">
+            <defs>
+              <linearGradient id="gradAnillo" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#ffd7b8"/><stop offset="100%" stop-color="#ff7a29"/>
+              </linearGradient>
+            </defs>
+            <circle class="pista" cx="37" cy="37" r="31" style="stroke:rgba(255,255,255,.22)"/>
+            <circle class="valor" id="anilloAvance" cx="37" cy="37" r="31"
+                    stroke-dasharray="<%= 2 * Math.PI * 31 %>"
+                    stroke-dashoffset="<%= 2 * Math.PI * 31 * (1 - stats.avance / 100) %>"/>
+          </svg>
+          <b style="color:#fff" id="anilloTxt"><%= stats.avance %>%</b>
+        </div>
+      </div>
+
+      <div class="hero-datos">
+        <div class="hero-dato">
+          <div class="k">Peso total</div>
+          <div class="v"><%= fmtKg(stats.totalPeso) %> <span style="font-size:.8rem">kg</span></div>
+        </div>
+        <div class="hero-dato">
+          <div class="k">Piezas</div>
+          <div class="v"><%= fmtNum(stats.totalPiezas) %></div>
+        </div>
+        <div class="hero-dato">
+          <div class="k">Documentos</div>
+          <div class="v"><%= stats.documentos %></div>
+        </div>
+        <div class="hero-dato">
+          <div class="k">Terminadas</div>
+          <div class="v"><span id="heroCompletas"><%= stats.completas %></span> / <%= stats.renglones %></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------------------- VISOR 3D ---------------------------- -->
+    <% if (viewer) { %>
+      <div class="anim anim-1 mb-2">
+        <% if (viewer.embeddable) { %>
+          <div class="tarjeta compacta" style="padding:12px">
+            <div class="fila-entre mb-1" style="padding:2px 4px">
+              <div class="fila" style="gap:8px">
+                <span style="color:var(--naranja)"><%- icon('cubo', 20) %></span>
+                <b class="txt-tinta">Modelo 3D del proyecto</b>
+              </div>
+              <div class="fila" style="gap:6px">
+                <button class="btn btn-suave btn-chico" type="button" id="btnVisor">
+                  <%- icon('ojo', 15) %> <span>Mostrar visor</span>
+                </button>
+                <a class="btn btn-linea btn-chico" href="<%= viewer.url %>" target="_blank" rel="noopener">
+                  <%- icon('externo', 15) %> Abrir
+                </a>
+              </div>
+            </div>
+            <div class="visor-caja oculto" id="cajaVisor">
+              <iframe id="marcoVisor" data-src="<%= viewer.embedUrl %>" allowfullscreen loading="lazy"
+                      title="Visor Autodesk"></iframe>
+            </div>
+          </div>
+        <% } else { %>
+          <a class="visor-boton" href="<%= viewer.url %>" target="_blank" rel="noopener">
+            <span class="cubo"><%- icon('cubo', 26) %></span>
+            <span class="crece">
+              <b>Ver modelo 3D en Autodesk</b>
+              <small>Se abre el visor en linea en una pestana nueva</small>
+            </span>
+            <%- icon('externo', 20) %>
+          </a>
+        <% } %>
+      </div>
+    <% } %>
+
+    <!-- ---------------------------- PESTANAS ---------------------------- -->
+    <div class="pestanas anim anim-2" id="pestanas">
+      <button class="pestana activa" data-panel="piezas">
+        <%- icon('lista', 16) %> Piezas <span class="cuenta"><%= pieces.length %></span>
+      </button>
+      <button class="pestana" data-panel="planos">
+        <%- icon('archivo', 16) %> Planos <span class="cuenta"><%= planos.length %></span>
+      </button>
+      <button class="pestana" data-panel="soldadura">
+        <%- icon('flama', 16) %> Soldadura <span class="cuenta"><%= soldadura.length %></span>
+      </button>
+      <button class="pestana" data-panel="info">
+        <%- icon('info', 16) %> Info
+      </button>
+    </div>
+
+    <!-- ============================ PIEZAS ============================ -->
+    <div class="panel activo" id="panel-piezas">
+      <% if (!pieces.length) { %>
+        <div class="tarjeta vacio">
+          <div class="vacio-icono"><%- icon('lista', 32) %></div>
+          <h3>Todavia no hay lista de piezas</h3>
+          <p>El administrador aun no ha subido el listado de piezas de este proyecto.</p>
+          <% if (user.role === 'admin') { %>
+            <a href="/admin/proyecto/<%= project.id %>#piezas" class="btn btn-primario">
+              <%- icon('subir', 17) %> Subir listado de piezas
+            </a>
+          <% } %>
+        </div>
+      <% } else { %>
+
+        <div class="buscador">
+          <%- icon('buscar', 18) %>
+          <input type="search" id="buscarPieza" placeholder="Buscar marca, descripcion o perfil..." autocomplete="off">
+        </div>
+
+        <div class="filtros">
+          <button class="filtro activo" data-filtro="todas">Todas (<%= pieces.length %>)</button>
+          <button class="filtro" data-filtro="pendientes">Pendientes</button>
+          <button class="filtro" data-filtro="listas">Terminadas</button>
+          <% lots.filter(l => l.name).forEach(function (l) { %>
+            <button class="filtro" data-filtro="lote" data-lote="<%= l.name %>"><%= l.name %></button>
+          <% }) %>
+        </div>
+
+        <% if (stages.length > 1) { %>
+          <div class="tarjeta compacta mb-2">
+            <div class="txt-chico negrita txt-tinta mb-1">Avance por etapa</div>
+            <% stageProgress.forEach(function (sp) { %>
+              <div style="margin-bottom:9px">
+                <div class="fila-entre txt-chico" style="margin-bottom:4px">
+                  <span class="negrita"><%= sp.name %></span>
+                  <span class="txt-suave"><%= sp.done %> / <%= sp.total %></span>
+                </div>
+                <div class="barra barra-fina"><i style="width:<%= sp.total ? Math.round(sp.done / sp.total * 100) : 0 %>%"></i></div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+
+        <div id="listaPiezas">
+          <% lots.forEach(function (lote, li) { %>
+            <div class="grupo-lote" data-lote="<%= lote.name %>">
+              <% if (lote.name) { %>
+                <div class="grupo-cab">
+                  <span class="flecha"><%- icon('flecha', 18) %></span>
+                  <h3 class="crece"><%= lote.name %></h3>
+                  <span class="chip chip-gris"><%= lote.pieces.length %> piezas</span>
+                  <span class="chip"><%= fmtKg(lote.weight) %> kg</span>
+                </div>
+              <% } %>
+              <div class="grupo-cuerpo">
+                <% lote.pieces.forEach(function (p) {
+                     const marcas = checkMap[p.id] || {};
+                     const completa = stages.every(function (s) { return marcas[s]; });
+                     const docs = docsByPiece[p.id] || [];
+                %>
+<div class="pieza<%= completa ? ' lista' : '' %>" data-buscar="<%= (p.mark + ' ' + (p.description || '') + ' ' + (p.profile || '') + ' ' + (p.material || '')).toLowerCase() %>" data-lote="<%= p.lot || '' %>" data-completa="<%= completa ? 1 : 0 %>"><div class="pieza-fila"><div class="pieza-datos" data-abrir="<%= p.id %>"><div class="pieza-marca"><%= p.mark %><% if (docs.length) { %> <span class="chip chip-gris" style="font-size:.66rem"><%= docs.length %> plano<%= docs.length > 1 ? 's' : '' %></span><% } %></div><% if (p.description) { %><div class="pieza-desc"><%= p.description %></div><% } %><div class="pieza-meta"><% if (p.profile) { %><span><%= p.profile %></span><% } %><span>Cant: <b><%= fmtNum(p.qty) %></b></span><span><b><%= fmtKg(p.total_weight) %></b> kg</span></div></div><div class="pieza-acciones"><% if (stages.length === 1) { %><label class="casilla"><input type="checkbox" class="chk" data-pieza="<%= p.id %>" data-etapa="<%= stages[0] %>"<%= marcas[stages[0]] ? ' checked' : '' %>><span class="casilla-caja"><svg viewBox="0 0 24 24"><use href="#ic-ok"/></svg></span></label><% } else { %><div class="etapas-fila"><% stages.forEach(function (s) { %><div class="etapa-item"><label class="casilla chica"><input type="checkbox" class="chk" data-pieza="<%= p.id %>" data-etapa="<%= s %>"<%= marcas[s] ? ' checked' : '' %>><span class="casilla-caja"><svg viewBox="0 0 24 24"><use href="#ic-ok"/></svg></span></label><span class="casilla-etq"><%= s.slice(0, 5) %></span></div><% }) %></div><% } %></div></div></div><% }) %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="vacio oculto" id="sinResultados">
+          <div class="vacio-icono"><%- icon('buscar', 32) %></div>
+          <h3>Sin resultados</h3>
+          <p>No encontramos piezas con ese texto o filtro.</p>
+        </div>
+
+        <div class="fila mt-2" style="justify-content:center">
+          <a class="btn btn-linea btn-chico" href="/p/<%= project.slug %>/avance.csv">
+            <%- icon('descargar', 15) %> Descargar avance en Excel (CSV)
+          </a>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- ============================ PLANOS ============================ -->
+    <div class="panel" id="panel-planos">
+      <% if (!planos.length && !modelos.length && !generales.length) { %>
+        <div class="tarjeta vacio">
+          <div class="vacio-icono"><%- icon('carpeta', 32) %></div>
+          <h3>Sin planos cargados</h3>
+          <p>Ingenieria todavia no ha subido el lote de planos de este proyecto.</p>
+        </div>
+      <% } else { %>
+        <div class="buscador">
+          <%- icon('buscar', 18) %>
+          <input type="search" id="buscarPlano" placeholder="Buscar plano por nombre o marca..." autocomplete="off">
+        </div>
+        <div id="listaPlanos">
+          <% [{t:'Planos', l:planos, i:'archivo'}, {t:'Modelos 3D', l:modelos, i:'cubo'}, {t:'Otros documentos', l:generales, i:'carpeta'}].forEach(function (g) { %>
+            <% if (g.l.length) { %>
+              <div class="fila mb-1 mt-2" style="gap:8px">
+                <span class="txt-suave"><%- icon(g.i, 17) %></span>
+                <h3 style="margin:0"><%= g.t %></h3>
+                <span class="chip chip-gris"><%= g.l.length %></span>
+              </div>
+              <% g.l.forEach(function (d) { %>
+                <a class="doc" href="/ver/<%= d.id %>" data-buscar="<%= (d.original_name + ' ' + (d.rel_folder || '')).toLowerCase() %>">
+                  <span class="doc-icono <%= claseDoc(d.ext) %>"><%= etqDoc(d.ext) %></span>
+                  <span class="doc-datos">
+                    <span class="doc-nombre"><%= d.original_name %></span>
+                    <span class="doc-meta">
+                      <% if (d.rel_folder) { %><span><%- icon('carpeta', 12) %> <%= d.rel_folder %></span><% } %>
+                      <span><%= humanSize(d.size) %></span>
+                    </span>
+                  </span>
+                  <span class="txt-suave"><%- icon('flecha', 18, 'style="transform:rotate(-90deg)"') %></span>
+                </a>
+              <% }) %>
+            <% } %>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- =========================== SOLDADURA =========================== -->
+    <div class="panel" id="panel-soldadura">
+      <% if (!soldadura.length) { %>
+        <div class="tarjeta vacio">
+          <div class="vacio-icono" style="background:var(--naranja-suave);color:var(--naranja-oscuro)"><%- icon('flama', 32) %></div>
+          <h3>Sin especificaciones de soldadura</h3>
+          <p>Aqui apareceran los WPS y las especificaciones de soldadura del proyecto cuando se suban.</p>
+        </div>
+      <% } else { %>
+        <div class="aviso aviso-aviso">
+          <%- icon('flama', 19) %>
+          <div><b>Antes de soldar</b> revisa el procedimiento (WPS) que corresponde a la pieza que vas a fabricar.</div>
+        </div>
+        <% soldadura.forEach(function (d) { %>
+          <a class="doc" href="/ver/<%= d.id %>">
+            <span class="doc-icono <%= claseDoc(d.ext) %>"><%= etqDoc(d.ext) %></span>
+            <span class="doc-datos">
+              <span class="doc-nombre"><%= d.original_name %></span>
+              <span class="doc-meta">
+                <% if (d.rel_folder) { %><span><%= d.rel_folder %></span><% } %>
+                <span><%= humanSize(d.size) %></span>
+              </span>
+            </span>
+            <span class="txt-suave"><%- icon('flecha', 18, 'style="transform:rotate(-90deg)"') %></span>
+          </a>
+        <% }) %>
+      <% } %>
+    </div>
+
+    <!-- ============================= INFO ============================= -->
+    <div class="panel" id="panel-info">
+      <div class="rejilla rejilla-2">
+        <div class="tarjeta">
+          <div class="tarjeta-cab"><%- icon('edificio', 20) %><h3 class="crece">Datos del proyecto</h3></div>
+          <table class="tabla" style="min-width:0">
+            <tbody>
+              <tr><td class="txt-suave">Proyecto</td><td class="negrita txt-tinta"><%= project.name %></td></tr>
+              <% if (project.code) { %><tr><td class="txt-suave">Codigo</td><td class="negrita txt-tinta"><%= project.code %></td></tr><% } %>
+              <% if (project.client) { %><tr><td class="txt-suave">Cliente</td><td class="negrita txt-tinta"><%= project.client %></td></tr><% } %>
+              <% if (project.location) { %><tr><td class="txt-suave">Ubicacion</td><td class="negrita txt-tinta"><%= project.location %></td></tr><% } %>
+              <% if (project.start_date) { %><tr><td class="txt-suave">Inicio</td><td class="negrita txt-tinta"><%= project.start_date %></td></tr><% } %>
+              <% if (project.due_date) { %><tr><td class="txt-suave">Entrega</td><td class="negrita txt-tinta"><%= project.due_date %></td></tr><% } %>
+              <tr><td class="txt-suave">Estado</td><td><span class="chip <%= estadoChip %>"><%= project.status %></span></td></tr>
+            </tbody>
+          </table>
+          <% if (project.description) { %>
+            <hr class="sep">
+            <div class="txt-chico"><%= project.description %></div>
+          <% } %>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta-cab"><%- icon('grafica', 20) %><h3 class="crece">Resumen de fabricacion</h3></div>
+          <div class="rejilla rejilla-2" style="gap:10px">
+            <div class="metrica">
+              <div class="etq">Peso total</div>
+              <div class="val"><%= fmtKg(stats.totalPeso) %> <span>kg</span></div>
+              <div class="icono"><%- icon('peso', 16) %></div>
+            </div>
+            <div class="metrica verde">
+              <div class="etq">Peso terminado</div>
+              <div class="val" id="pesoTerminado"><%= fmtKg(stats.pesoCompleto) %> <span>kg</span></div>
+              <div class="icono"><%- icon('palomita', 16) %></div>
+            </div>
+            <div class="metrica naranja">
+              <div class="etq">Renglones</div>
+              <div class="val"><%= stats.renglones %></div>
+              <div class="icono"><%- icon('lista', 16) %></div>
+            </div>
+            <div class="metrica ambar">
+              <div class="etq">Documentos</div>
+              <div class="val"><%= stats.documentos %></div>
+              <div class="icono"><%- icon('archivo', 16) %></div>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="fila-entre txt-chico mb-1">
+              <span class="negrita">Avance por peso</span>
+              <span class="txt-suave" id="avancePesoTxt"><%= stats.avancePeso %>%</span>
+            </div>
+            <div class="barra verde"><i id="barraPeso" style="width:<%= stats.avancePeso %>%"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <% if (user.role === 'admin') { %>
+        <div class="tarjeta mt-2">
+          <div class="tarjeta-cab"><%- icon('nfc', 20) %><h3 class="crece">Administracion</h3></div>
+          <div class="fila" style="flex-wrap:wrap">
+            <a href="/admin/proyecto/<%= project.id %>" class="btn btn-primario"><%- icon('ajustes', 17) %> Administrar proyecto</a>
+            <a href="/admin/proyecto/<%= project.id %>#nfc" class="btn btn-linea"><%- icon('qr', 17) %> Ver enlace NFC y QR</a>
+          </div>
+        </div>
+      <% } %>
+    </div>
+
+  </div>
+</div>
+
+<!-- ------------------------- PANEL DE LA PIEZA ------------------------- -->
+<div class="cajon" id="cajonPieza">
+  <div class="jalador"></div>
+  <div class="cajon-cab">
+    <div class="crece">
+      <div class="txt-suave txt-chico negrita" style="text-transform:uppercase;letter-spacing:.1em">Pieza</div>
+      <h2 id="cajonMarca" style="margin:0"></h2>
+      <div class="txt-suave txt-chico" id="cajonDesc"></div>
+    </div>
+    <button class="btn-fantasma" type="button" id="cerrarCajon"><%- icon('cerrar', 20) %></button>
+  </div>
+  <div class="cajon-cuerpo" id="cajonCuerpo"></div>
+</div>
+
+<%- include('partials/tabbar') %>
+<script>
+  window.PROYECTO = {
+    id: <%= project.id %>,
+    slug: '<%= project.slug %>',
+    etapas: <%- JSON.stringify(stages) %>
+  };
+</script>
+<script src="/static/js/proyecto.js"></script>
+<%- include('partials/foot') %>

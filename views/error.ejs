@@ -1,0 +1,15 @@
+<%- include('partials/head') %>
+<% if (typeof user !== 'undefined' && user) { %><%- include('partials/nav') %><% } %>
+<div class="pagina">
+  <div class="envoltura-angosta">
+    <div class="tarjeta centro anim" style="padding:44px 24px">
+      <div class="vacio-icono" style="background:var(--rojo-suave);color:var(--rojo)"><%- icon('alerta', 32) %></div>
+      <h1 style="font-size:2.4rem;margin-bottom:2px"><%= code %></h1>
+      <h2 style="margin-bottom:10px"><%= title %></h2>
+      <p class="txt-suave" style="max-width:420px;margin:0 auto 20px"><%= message %></p>
+      <a href="/" class="btn btn-primario"><%- icon('flechaIzq', 17) %> Volver al inicio</a>
+    </div>
+  </div>
+</div>
+<% if (typeof user !== 'undefined' && user) { %><%- include('partials/tabbar') %><% } %>
+<%- include('partials/foot') %>

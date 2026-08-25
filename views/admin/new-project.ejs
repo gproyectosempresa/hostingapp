@@ -1,0 +1,254 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<div class="pagina">
+  <div class="envoltura-angosta">
+    <div class="fila mb-2 anim">
+      <a href="/admin" class="btn btn-fantasma"><%- icon('flechaIzq', 18) %></a>
+      <div>
+        <h1 style="margin-bottom:2px">Nuevo proyecto</h1>
+        <p class="txt-suave mb-0">En 4 pasos queda lista la pagina y el enlace para la etiqueta NFC.</p>
+      </div>
+    </div>
+
+    <% if (error) { %>
+      <div class="aviso aviso-error"><%- icon('alerta', 19) %><div><%= error %></div></div>
+    <% } %>
+
+    <div class="pasos anim anim-1">
+      <div class="paso activo" data-paso="1"><div class="paso-bola">1</div><div class="paso-txt">Datos</div></div>
+      <div class="paso" data-paso="2"><div class="paso-bola">2</div><div class="paso-txt">Planos</div></div>
+      <div class="paso" data-paso="3"><div class="paso-bola">3</div><div class="paso-txt">Piezas</div></div>
+      <div class="paso" data-paso="4"><div class="paso-bola">4</div><div class="paso-txt">Modelo 3D</div></div>
+    </div>
+
+    <form id="formProyecto" method="post" action="/admin/nuevo" enctype="multipart/form-data">
+
+      <!-- ============================ PASO 1 ============================ -->
+      <section class="tarjeta anim anim-2 paso-panel" data-panel="1">
+        <div class="tarjeta-cab"><%- icon('edificio', 20) %><h2 class="crece">Datos del proyecto</h2></div>
+
+        <div class="campo">
+          <label for="name">Nombre del proyecto *</label>
+          <input type="text" id="name" name="name" value="<%= form.name || '' %>" required
+                 placeholder="Nave industrial Planta Norte" autofocus>
+        </div>
+
+        <div class="fila-campos dos">
+          <div class="campo">
+            <label for="code">Codigo interno</label>
+            <input type="text" id="code" name="code" value="<%= form.code || '' %>" placeholder="EM-2026-014">
+          </div>
+          <div class="campo">
+            <label for="client">Cliente</label>
+            <input type="text" id="client" name="client" value="<%= form.client || '' %>" placeholder="Constructora del Norte">
+          </div>
+        </div>
+
+        <div class="campo">
+          <label for="location">Ubicacion de la obra</label>
+          <input type="text" id="location" name="location" value="<%= form.location || '' %>" placeholder="Apodaca, Nuevo Leon">
+        </div>
+
+        <div class="fila-campos tres">
+          <div class="campo">
+            <label for="start_date">Inicio</label>
+            <input type="date" id="start_date" name="start_date" value="<%= form.start_date || '' %>">
+          </div>
+          <div class="campo">
+            <label for="due_date">Entrega</label>
+            <input type="date" id="due_date" name="due_date" value="<%= form.due_date || '' %>">
+          </div>
+          <div class="campo">
+            <label for="status">Estado</label>
+            <select id="status" name="status">
+              <option value="activo">Activo</option>
+              <option value="pausado">Pausado</option>
+              <option value="terminado">Terminado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="campo">
+          <label for="description">Notas para el personal de piso</label>
+          <textarea id="description" name="description" placeholder="Indicaciones generales, contacto del residente, restricciones de acceso..."><%= form.description || '' %></textarea>
+        </div>
+
+        <div class="fila" style="gap:14px;align-items:flex-end">
+          <div class="campo" style="margin:0">
+            <label for="color">Color</label>
+            <input type="color" id="color" name="color" value="<%= form.color || '#2f6fed' %>">
+          </div>
+          <div class="campo crece" style="margin:0">
+            <label for="slug">Direccion web (opcional)</label>
+            <input type="text" id="slug" name="slug" value="<%= form.slug || '' %>" placeholder="se-genera-sola-con-el-nombre">
+            <small class="ayuda">Asi se vera el enlace de la NFC: <span class="mono">/p/<span id="vistaSlug">nombre-del-proyecto</span></span></small>
+          </div>
+        </div>
+
+        <div class="fila mt-2" style="justify-content:flex-end">
+          <button type="button" class="btn btn-primario siguiente-paso">Siguiente <%- icon('flecha', 16, 'style="transform:rotate(-90deg)"') %></button>
+        </div>
+      </section>
+
+      <!-- ============================ PASO 2 ============================ -->
+      <section class="tarjeta anim paso-panel oculto" data-panel="2">
+        <div class="tarjeta-cab"><%- icon('carpeta', 20) %><h2 class="crece">Planos y documentos</h2></div>
+
+        <div class="aviso aviso-info">
+          <%- icon('info', 19) %>
+          <div>
+            <b>Importante para que se vinculen solos</b>
+            Los planos deben traer la <b>marca de la pieza en el nombre del archivo</b>
+            (por ejemplo <span class="mono">V-101_rev2.pdf</span> o <span class="mono">TR-05.dxf</span>).
+            Asi cada pieza del checklist muestra su plano automaticamente.
+          </div>
+        </div>
+
+        <div class="campo">
+          <label>Carpeta completa de planos (PDF, DXF, DWG, imagenes)</label>
+          <div class="zona" id="zonaCarpeta">
+            <input type="file" id="inputCarpeta" webkitdirectory directory multiple>
+            <div class="zona-icono"><%- icon('carpeta', 23) %></div>
+            <b>Selecciona la carpeta del proyecto</b>
+            <small>Se suben todos los archivos y subcarpetas. Maximo <%= maxMb %> MB por archivo.</small>
+          </div>
+          <div class="fila mt-1" style="gap:8px">
+            <button type="button" class="btn btn-linea btn-chico" id="btnArchivosSueltos">
+              <%- icon('archivo', 14) %> O elegir archivos sueltos
+            </button>
+            <input type="file" id="inputSueltos" multiple class="oculto">
+            <span class="txt-suave txt-chico" id="resumenCarpeta"></span>
+          </div>
+          <div class="lista-archivos" id="listaCarpeta"></div>
+        </div>
+
+        <hr class="sep">
+
+        <div class="campo">
+          <label>Especificaciones de soldadura (WPS, PQR, normas)</label>
+          <div class="zona naranja" id="zonaSoldadura">
+            <input type="file" id="inputSoldadura" multiple accept=".pdf,.doc,.docx,.jpg,.png">
+            <div class="zona-icono"><%- icon('flama', 23) %></div>
+            <b>Sube los PDF de soldadura</b>
+            <small>Apareceran en su propia pestana dentro del proyecto.</small>
+          </div>
+          <div class="lista-archivos" id="listaSoldadura"></div>
+        </div>
+
+        <div class="fila-entre mt-2">
+          <button type="button" class="btn btn-linea anterior-paso"><%- icon('flechaIzq', 16) %> Atras</button>
+          <button type="button" class="btn btn-primario siguiente-paso">Siguiente <%- icon('flecha', 16, 'style="transform:rotate(-90deg)"') %></button>
+        </div>
+      </section>
+
+      <!-- ============================ PASO 3 ============================ -->
+      <section class="tarjeta anim paso-panel oculto" data-panel="3">
+        <div class="tarjeta-cab"><%- icon('lista', 20) %><h2 class="crece">Listado de piezas</h2></div>
+
+        <div class="aviso aviso-info">
+          <%- icon('info', 19) %>
+          <div>
+            <b>Formato del Excel</b>
+            La primera fila debe tener los encabezados. Se reconocen:
+            <span class="mono">Marca</span>, <span class="mono">Descripcion</span>, <span class="mono">Perfil</span>,
+            <span class="mono">Material</span>, <span class="mono">Cantidad</span>,
+            <span class="mono">Peso unitario</span>, <span class="mono">Peso total</span> y
+            <span class="mono">Lote</span> (o Fase / Area / Eje).
+            Lo minimo indispensable es <b>Marca</b> y <b>Peso</b>.
+          </div>
+        </div>
+
+        <div class="campo">
+          <div class="zona" id="zonaPiezas">
+            <input type="file" id="inputPiezas" accept=".xlsx,.xls,.csv,.txt">
+            <div class="zona-icono"><%- icon('lista', 23) %></div>
+            <b>Sube el Excel o CSV de piezas</b>
+            <small>.xlsx, .xls o .csv &middot; con esto se arma el checklist y el peso del proyecto</small>
+          </div>
+          <div class="lista-archivos" id="listaPiezasArchivo"></div>
+        </div>
+
+        <hr class="sep">
+
+        <div class="campo" id="checklist">
+          <label>Etapas del checklist</label>
+          <div class="fila mb-1" style="gap:6px;flex-wrap:wrap">
+            <button type="button" class="filtro preset-etapas activo" data-etapas="Fabricado">Simple (una palomita)</button>
+            <button type="button" class="filtro preset-etapas" data-etapas="Habilitado,Armado,Soldado,Pintura">Por etapas</button>
+            <button type="button" class="filtro preset-etapas" data-etapas="Fabricado,Inspeccion,Embarcado">Fabricacion y embarque</button>
+          </div>
+          <input type="text" id="stages" name="stages" value="Fabricado" placeholder="Fabricado">
+          <small class="ayuda">Separa las etapas con comas. Cada pieza tendra una casilla por etapa.</small>
+        </div>
+
+        <div class="fila-entre mt-2">
+          <button type="button" class="btn btn-linea anterior-paso"><%- icon('flechaIzq', 16) %> Atras</button>
+          <button type="button" class="btn btn-primario siguiente-paso">Siguiente <%- icon('flecha', 16, 'style="transform:rotate(-90deg)"') %></button>
+        </div>
+      </section>
+
+      <!-- ============================ PASO 4 ============================ -->
+      <section class="tarjeta anim paso-panel oculto" data-panel="4">
+        <div class="tarjeta-cab"><%- icon('cubo', 20) %><h2 class="crece">Modelo 3D en Autodesk</h2></div>
+
+        <div class="campo">
+          <label for="viewer_url">Link de visualizacion en linea</label>
+          <div class="campo-icono">
+            <%- icon('externo', 18) %>
+            <input type="url" id="viewer_url" name="viewer_url" value="<%= form.viewer_url || '' %>"
+                   placeholder="https://autodesk360.com/shares/public/...">
+          </div>
+          <small class="ayuda">
+            Pega el link que genera Autodesk al compartir el modelo (IFC, RVT, NWD...).
+            Si el link permite incrustarse, el modelo se vera <b>dentro</b> de la pagina del proyecto;
+            si no, se muestra un boton grande que lo abre en una pestana nueva.
+          </small>
+        </div>
+
+        <div class="aviso aviso-aviso">
+          <%- icon('info', 19) %>
+          <div>
+            <b>Como sacar el link en Autodesk</b>
+            Sube el modelo a Autodesk Viewer / ACC, abre <b>Compartir</b>, activa el enlace publico
+            y copia la direccion. Puedes dejarlo vacio y agregarlo despues.
+          </div>
+        </div>
+
+        <hr class="sep">
+
+        <div class="caja-link">
+          <div class="fila" style="gap:9px;margin-bottom:4px">
+            <%- icon('nfc', 20) %><b>Al guardar se genera el enlace de la NFC</b>
+          </div>
+          <div class="txt-chico" style="opacity:.85">
+            Vas a poder copiarlo, descargar el codigo QR y grabarlo en la etiqueta con cualquier
+            app de NFC (NFC Tools, TagWriter) como registro tipo <b>URL</b>.
+          </div>
+        </div>
+
+        <div class="fila-entre mt-3">
+          <button type="button" class="btn btn-linea anterior-paso"><%- icon('flechaIzq', 16) %> Atras</button>
+          <button type="submit" class="btn btn-naranja btn-grande" id="btnGuardar">
+            <%- icon('palomita', 18) %> Crear proyecto
+          </button>
+        </div>
+      </section>
+    </form>
+
+    <!-- barra de subida -->
+    <div class="tarjeta oculto mt-2" id="cajaProgreso">
+      <div class="fila mb-1" style="gap:10px">
+        <span class="girando" style="color:var(--azul-500)"><%- icon('refrescar', 20) %></span>
+        <b class="crece txt-tinta" id="textoProgreso">Subiendo archivos...</b>
+        <span class="negrita txt-tinta" id="porcentaje">0%</span>
+      </div>
+      <div class="barra"><i id="barraProgreso"></i></div>
+      <small class="ayuda">No cierres esta ventana. Los archivos grandes pueden tardar varios minutos.</small>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/tabbar') %>
+<script src="/static/js/subida.js"></script>
+<%- include('../partials/foot') %>

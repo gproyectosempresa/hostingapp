@@ -1,0 +1,17 @@
+<%
+  const esAdmin = user && user.role === 'admin';
+  const on = (p) => currentPath.indexOf(p) === 0 ? 'activo' : '';
+%>
+<div class="tabbar">
+  <% if (esAdmin) { %>
+    <a href="/admin" class="<%= currentPath === '/admin' ? 'activo' : '' %>"><%- icon('tablero', 21) %> Tablero</a>
+    <a href="/admin/nuevo" class="<%= on('/admin/nuevo') %>"><%- icon('mas', 21) %> Nuevo</a>
+    <a href="/admin/enlaces" class="<%= on('/admin/enlaces') %>"><%- icon('nfc', 21) %> Enlaces</a>
+    <a href="/admin/usuarios" class="<%= on('/admin/usuarios') %>"><%- icon('usuarios', 21) %> Usuarios</a>
+    <a href="/mi-cuenta" class="<%= on('/mi-cuenta') %>"><%- icon('usuario', 21) %> Cuenta</a>
+  <% } else { %>
+    <a href="/proyectos" class="<%= on('/proyectos') %>"><%- icon('proyectos', 21) %> Proyectos</a>
+    <a href="/mi-cuenta" class="<%= on('/mi-cuenta') %>"><%- icon('usuario', 21) %> Mi cuenta</a>
+    <a href="/salir"><%- icon('salir', 21) %> Salir</a>
+  <% } %>
+</div>

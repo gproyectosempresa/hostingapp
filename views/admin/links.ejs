@@ -1,0 +1,62 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<div class="pagina">
+  <div class="envoltura">
+    <%- include('../partials/flash') %>
+
+    <div class="mb-3 anim">
+      <h1 style="margin-bottom:2px">Enlaces NFC</h1>
+      <p class="txt-suave mb-0">Un enlace por proyecto, listo para grabarse en la etiqueta.</p>
+    </div>
+
+    <div class="tarjeta mb-3 anim anim-1">
+      <div class="tarjeta-cab"><%- icon('celular', 20) %><h3 class="crece">Como grabar la etiqueta</h3></div>
+      <div class="txt-chico">
+        <p><b>1.</b> Copia el enlace del proyecto con el boton <b>Copiar</b>.</p>
+        <p><b>2.</b> Abre en tu celular una app de NFC (NFC Tools, NXP TagWriter o similar).</p>
+        <p><b>3.</b> Elige <b>Escribir &rarr; URL / Direccion web</b>, pega el enlace y acerca la etiqueta.</p>
+        <p class="mb-0"><b>4.</b> Recomendado: bloquea la etiqueta para que nadie la reescriba, y pega el QR junto a ella.</p>
+      </div>
+    </div>
+
+    <% if (!projects.length) { %>
+      <div class="tarjeta vacio">
+        <div class="vacio-icono"><%- icon('nfc', 32) %></div>
+        <h3>Sin proyectos todavia</h3>
+        <p>Da de alta un proyecto y aqui aparecera su enlace listo para la NFC.</p>
+        <a href="/admin/nuevo" class="btn btn-primario"><%- icon('mas', 17) %> Nuevo proyecto</a>
+      </div>
+    <% } else { %>
+      <div class="rejilla rejilla-2">
+        <% projects.forEach(function (p, i) { %>
+          <div class="tarjeta anim anim-<%= Math.min(i + 1, 6) %>">
+            <div class="fila mb-2" style="gap:14px">
+              <div class="qr-caja" style="padding:6px">
+                <img src="/admin/proyecto/<%= p.id %>/qr.png" alt="QR" style="width:96px;height:96px" loading="lazy">
+              </div>
+              <div class="crece" style="min-width:0">
+                <div class="fila mb-1" style="gap:6px">
+                  <span class="chip <%= p.status === 'activo' ? 'chip-verde' : 'chip-gris' %> chip-punto"><%= p.status %></span>
+                  <% if (p.code) { %><span class="chip chip-gris"><%= p.code %></span><% } %>
+                </div>
+                <h3 style="margin-bottom:2px"><%= p.name %></h3>
+                <div class="txt-suave txt-chico"><%= p.client || '' %></div>
+              </div>
+            </div>
+            <div class="mono txt-chico" style="word-break:break-all;background:#f7f9fd;border:1px solid var(--linea);border-radius:10px;padding:9px 11px"><%= p.link %></div>
+            <div class="fila mt-2" style="gap:7px;flex-wrap:wrap">
+              <button class="btn btn-primario btn-chico copiar" data-link="<%= p.link %>"><%- icon('copiar', 14) %> Copiar</button>
+              <a class="btn btn-linea btn-chico" href="/admin/proyecto/<%= p.id %>/qr.png" download="qr-<%= p.slug %>.png"><%- icon('descargar', 14) %> QR</a>
+              <a class="btn btn-linea btn-chico" href="/p/<%= p.slug %>" target="_blank"><%- icon('ojo', 14) %> Abrir</a>
+              <a class="btn btn-linea btn-chico" href="/admin/proyecto/<%= p.id %>"><%- icon('ajustes', 14) %> Administrar</a>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/tabbar') %>
+<%- include('../partials/foot') %>

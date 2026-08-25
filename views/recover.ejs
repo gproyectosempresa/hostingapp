@@ -1,0 +1,42 @@
+<%- include('partials/head') %>
+<div class="acceso">
+  <div class="acceso-caja">
+    <div class="acceso-logo"><%- icon('candado', 30) %></div>
+    <h1>Recuperar contrasena</h1>
+    <p class="lema">Escribe tu correo y te mandamos un enlace para crear una nueva.</p>
+
+    <% if (message) { %>
+      <div class="aviso aviso-exito"><%- icon('palomita', 19) %><div><%= message %></div></div>
+    <% } %>
+    <% if (link) { %>
+      <div class="aviso aviso-aviso">
+        <%- icon('info', 19) %>
+        <div class="crece">
+          <b>El envio de correos no esta configurado.</b>
+          Usa este enlace directamente:
+          <div class="mono txt-chico" style="word-break:break-all;margin-top:6px"><%= link %></div>
+        </div>
+      </div>
+    <% } %>
+    <% if (error) { %>
+      <div class="aviso aviso-error"><%- icon('alerta', 19) %><div><%= error %></div></div>
+    <% } %>
+
+    <form method="post" action="/recuperar">
+      <div class="campo">
+        <label for="email">Correo electronico</label>
+        <div class="campo-icono">
+          <%- icon('correo', 18) %>
+          <input type="email" id="email" name="email" required inputmode="email" placeholder="tucorreo@empresa.com" autofocus>
+        </div>
+      </div>
+      <button class="btn btn-primario btn-grande btn-bloque" type="submit">
+        <%- icon('correo', 18) %> Enviar enlace
+      </button>
+    </form>
+    <div class="acceso-pie"><a href="/entrar">Volver a iniciar sesion</a></div>
+  </div>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

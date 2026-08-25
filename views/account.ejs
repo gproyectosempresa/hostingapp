@@ -1,0 +1,63 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<div class="pagina">
+  <div class="envoltura-angosta">
+    <h1 class="anim">Mi cuenta</h1>
+    <p class="txt-suave anim anim-1 mb-3">Actualiza tus datos o cambia tu contrasena.</p>
+
+    <% if (message) { %><div class="aviso aviso-exito"><%- icon('palomita', 19) %><div><%= message %></div></div><% } %>
+    <% if (error) { %><div class="aviso aviso-error"><%- icon('alerta', 19) %><div><%= error %></div></div><% } %>
+
+    <form method="post" action="/mi-cuenta">
+      <div class="tarjeta anim anim-2 mb-2">
+        <div class="tarjeta-cab">
+          <%- icon('usuario', 20) %>
+          <h2 class="crece">Datos personales</h2>
+          <span class="chip <%= user.role === 'admin' ? 'chip-naranja' : 'chip-verde' %>">
+            <%= user.role === 'admin' ? 'Administrador' : 'Usuario' %>
+          </span>
+        </div>
+        <div class="campo">
+          <label>Correo</label>
+          <input type="email" value="<%= user.email %>" disabled style="background:#f7f9fd;color:#6b7a99">
+          <small class="ayuda">El correo solo lo puede cambiar un administrador.</small>
+        </div>
+        <div class="fila-campos dos">
+          <div class="campo">
+            <label for="name">Nombre completo</label>
+            <input type="text" id="name" name="name" value="<%= user.name %>" required>
+          </div>
+          <div class="campo">
+            <label for="phone">Celular</label>
+            <input type="text" id="phone" name="phone" value="<%= user.phone || '' %>" inputmode="tel" placeholder="55 1234 5678">
+          </div>
+        </div>
+      </div>
+
+      <div class="tarjeta anim anim-3 mb-3">
+        <div class="tarjeta-cab">
+          <%- icon('candado', 20) %>
+          <h2 class="crece">Cambiar contrasena</h2>
+        </div>
+        <p class="txt-suave txt-chico">Dejalo vacio si no la quieres cambiar.</p>
+        <div class="fila-campos dos">
+          <div class="campo">
+            <label for="password">Contrasena nueva</label>
+            <input type="password" id="password" name="password" autocomplete="new-password" placeholder="Minimo 8 caracteres">
+          </div>
+          <div class="campo">
+            <label for="password2">Repite la contrasena</label>
+            <input type="password" id="password2" name="password2" autocomplete="new-password">
+          </div>
+        </div>
+      </div>
+
+      <div class="fila">
+        <button class="btn btn-primario btn-grande" type="submit"><%- icon('palomita', 18) %> Guardar cambios</button>
+        <a href="/salir" class="btn btn-linea"><%- icon('salir', 17) %> Cerrar sesion</a>
+      </div>
+    </form>
+  </div>
+</div>
+<%- include('partials/tabbar') %>
+<%- include('partials/foot') %>

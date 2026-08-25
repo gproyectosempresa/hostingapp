@@ -1,0 +1,50 @@
+<%
+  const esAdmin = user && user.role === 'admin';
+  const act = (p) => currentPath === p || (p !== '/' && currentPath.indexOf(p) === 0) ? 'activo' : '';
+  const iniciales = user ? String(user.name || user.email).trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase() : '';
+%>
+<nav class="nav">
+  <div class="envoltura nav-in">
+    <a class="marca" href="<%= esAdmin ? '/admin' : '/proyectos' %>">
+      <span class="marca-logo"><%- icon('nfc', 19) %></span>
+      <span class="marca-txt"><%= appName %><span>Estructura metalica</span></span>
+    </a>
+
+    <div class="nav-links">
+      <% if (esAdmin) { %>
+        <a href="/admin" class="<%= currentPath === '/admin' ? 'activo' : '' %>">Tablero</a>
+        <a href="/admin/nuevo" class="<%= act('/admin/nuevo') %>">Nuevo proyecto</a>
+        <a href="/admin/enlaces" class="<%= act('/admin/enlaces') %>">Enlaces NFC</a>
+        <a href="/admin/usuarios" class="<%= act('/admin/usuarios') %>">Usuarios</a>
+        <a href="/admin/ajustes" class="<%= act('/admin/ajustes') %>">Ajustes</a>
+      <% } else { %>
+        <a href="/proyectos" class="<%= act('/proyectos') %>">Mis proyectos</a>
+      <% } %>
+    </div>
+
+    <div class="nav-derecha">
+      <% if (esAdmin) { %>
+        <a href="/admin/nuevo" class="btn btn-primario btn-chico nowrap" style="display:none" id="btnNuevoNav">
+          <%- icon('mas', 15) %> Nuevo
+        </a>
+      <% } %>
+      <div class="menu" id="menuUsuario">
+        <button class="avatar" type="button" aria-label="Mi cuenta"><%= iniciales %></button>
+        <div class="menu-panel">
+          <div class="cab">
+            <b><%= user.name %></b>
+            <small><%= user.email %></small>
+            <div style="margin-top:6px">
+              <span class="chip <%= esAdmin ? 'chip-naranja' : 'chip-verde' %> chip-punto">
+                <%= esAdmin ? 'Administrador' : 'Usuario' %>
+              </span>
+            </div>
+          </div>
+          <a href="/mi-cuenta"><%- icon('usuario', 17) %> Mi cuenta</a>
+          <% if (esAdmin) { %><a href="/admin/ajustes"><%- icon('ajustes', 17) %> Ajustes</a><% } %>
+          <a href="/salir" class="salir"><%- icon('salir', 17) %> Cerrar sesion</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>

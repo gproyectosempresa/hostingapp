@@ -1,0 +1,7 @@
+<% if (typeof flash !== 'undefined' && flash) { %>
+  <div class="aviso aviso-<%= flash.tipo === 'exito' ? 'exito' : (flash.tipo === 'error' ? 'error' : (flash.tipo === 'aviso' ? 'aviso' : 'info')) %>" data-flash>
+    <%- icon(flash.tipo === 'exito' ? 'palomita' : (flash.tipo === 'error' ? 'alerta' : 'info'), 19) %>
+    <div class="crece"><%= flash.texto %></div>
+    <button type="button" class="btn-fantasma" style="padding:2px 4px;margin:-4px -6px 0 0" onclick="this.parentNode.remove()"><%- icon('cerrar', 15) %></button>
+  </div>
+<% } %>

@@ -1,0 +1,43 @@
+<%- include('partials/head') %>
+<div class="acceso">
+  <div class="acceso-caja" style="max-width:480px">
+    <div class="acceso-logo"><%- icon('rayo', 30) %></div>
+    <h1>Bienvenido</h1>
+    <p class="lema">Vamos a crear la cuenta del administrador. Solo se hace una vez.</p>
+
+    <% if (error) { %>
+      <div class="aviso aviso-error"><%- icon('alerta', 19) %><div><%= error %></div></div>
+    <% } %>
+
+    <form method="post" action="/instalacion">
+      <div class="campo">
+        <label for="name">Tu nombre completo</label>
+        <input type="text" id="name" name="name" value="<%= form.name || '' %>" required placeholder="Adrian Hinojosa" autofocus>
+      </div>
+      <div class="campo">
+        <label for="email">Correo electronico</label>
+        <input type="email" id="email" name="email" value="<%= form.email || '' %>" required
+               inputmode="email" placeholder="admin@empresa.com">
+        <small class="ayuda">Con este correo vas a entrar a la plataforma.</small>
+      </div>
+      <div class="fila-campos dos">
+        <div class="campo">
+          <label for="password">Contrasena</label>
+          <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Minimo 8 caracteres">
+        </div>
+        <div class="campo">
+          <label for="password2">Repite la contrasena</label>
+          <input type="password" id="password2" name="password2" required autocomplete="new-password">
+        </div>
+      </div>
+      <small class="ayuda mb-2" style="display:block">Debe tener al menos 8 caracteres, con letras y numeros.</small>
+
+      <button class="btn btn-primario btn-grande btn-bloque" type="submit">
+        <%- icon('palomita', 18) %> Crear administrador y empezar
+      </button>
+    </form>
+  </div>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
