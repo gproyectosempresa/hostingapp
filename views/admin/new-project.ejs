@@ -90,18 +90,19 @@ UPPER HV CLAMP - 1ZXX461026C8242	UPPER HV CLAMP-	1	995.629656	1ZXX461026C8242	CO
           <div class="crece" id="resumenPiezasTxt"></div>
         </div>
 
-        <div class="aviso aviso-aviso oculto" id="avisoPeso">
+        <div class="aviso aviso-info oculto" id="avisoPeso">
           <%- icon('peso', 19) %>
           <div class="crece">
-            <b>La columna se llama solo "Peso": aclara que significa</b>
+            <b>La columna "Peso" se tomo como el peso TOTAL del renglon</b>
+            <div class="txt-chico">Si en este archivo el peso viene por pieza, cambialo aqui:</div>
             <div class="fila mt-1" style="gap:6px;flex-wrap:wrap">
-              <button type="button" class="filtro activo" data-peso="0">Es el peso de UNA pieza</button>
-              <button type="button" class="filtro" data-peso="1">Es el peso TOTAL del renglon</button>
+              <button type="button" class="filtro activo" data-peso="1">Peso TOTAL del renglon</button>
+              <button type="button" class="filtro" data-peso="0">Peso de UNA pieza</button>
             </div>
             <div class="txt-chico mt-1" id="ejemploPeso"></div>
           </div>
         </div>
-        <input type="hidden" name="peso_es_total" id="peso_es_total" value="0">
+        <input type="hidden" name="peso_es_total" id="peso_es_total" value="1">
 
         <div class="campo">
           <label for="name">Nombre del proyecto *</label>

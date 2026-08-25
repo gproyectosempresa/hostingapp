@@ -308,10 +308,16 @@ function parseGrid(grid, opciones = {}) {
   const dato = (row, idx) => (idx == null || idx < 0 ? '' : cellText(row[idx]));
   const campo = (row, f) => dato(row, mapping[f]);
 
-  /* El peso generico ("Peso" a secas) puede ser unitario o del renglon. */
+  /*
+   * Una columna llamada solo "Peso" es ambigua: puede ser el peso de una
+   * pieza o el del renglon completo.  Por omision se toma como TOTAL del
+   * renglon, que es como lo entrega el sistema de ingenieria; el alta deja
+   * cambiarlo si algun archivo viene al reves.
+   * (Una columna llamada "Peso unitario" no entra aqui: esa siempre es unitaria.)
+   */
   const columnaPesoGenerica = mapping.unit_weight != null &&
-    /^(peso|weight|pesokg|kg)$/.test(norm(headers[mapping.unit_weight] || ''));
-  const pesoEsTotal = !!opciones.pesoEsTotal;
+    /^(peso|weight|pesokg|kg|pesokgs)$/.test(norm(headers[mapping.unit_weight] || ''));
+  const pesoEsTotal = opciones.pesoEsTotal === undefined ? true : !!opciones.pesoEsTotal;
 
   /* Convencion numerica de cada columna (punto o coma como decimal) */
   const conv = {

@@ -288,18 +288,18 @@
     if (campo && valor && !campo.value.trim()) campo.value = valor;
   }
 
+  /* Muestra un ejemplo con los numeros reales del propio archivo, tal como
+     los interpreto el servidor en el ultimo analisis. */
   function describirPeso(datos) {
     const ejemplo = document.getElementById('ejemploPeso');
     if (!ejemplo || !datos || !datos.muestra || !datos.muestra.length) return;
     const p = datos.muestra.find(function (x) { return x.qty > 1; }) || datos.muestra[0];
-    const esTotal = document.getElementById('peso_es_total').value === '1';
-    const unit = esTotal ? p.total_weight / (p.qty || 1) : p.unit_weight;
-    const total = esTotal ? p.total_weight : p.unit_weight * p.qty;
     ejemplo.innerHTML = 'Ejemplo con <b>' + escapar(p.mark) + '</b>: ' + numero(p.qty) +
-      ' pieza(s) × ' + numero(unit, 2) + ' kg = <b>' + numero(total, 2) + ' kg</b>';
+      ' pieza(s) × ' + numero(p.unit_weight, 3) + ' kg c/u = <b>' + numero(p.total_weight, 2) + ' kg</b>' +
+      ' &nbsp;·&nbsp; total del proyecto: <b>' + numero(datos.totals.peso, 2) + ' kg</b>';
   }
 
-  function mostrarResumen(datos) {
+  function mostrarResumen(datos, avanzar) {
     ultimoAnalisis = datos;
 
     ponerSiVacio('name', datos.proyecto.name);
@@ -332,59 +332,74 @@
       if (datos.pesoAmbiguo) describirPeso(datos);
     }
 
-    irAPaso(2);
+    if (avanzar) irAPaso(2);
+  }
+
+  /**
+   * Manda la lista al servidor para que la lea.
+   * avanzar = true la primera vez; al cambiar la interpretacion del peso
+   * solo se refrescan los numeros sin mover de paso.
+   */
+  function analizar(avanzar) {
+    const hayArchivo = !!bolsa.piezas;
+    const hayTexto = textoPiezas && textoPiezas.value.trim().length > 0;
+
+    if (!hayArchivo && !hayTexto) {
+      if (avanzar && window.confirm('No seleccionaste ninguna lista de piezas.\n\nPuedes crear el proyecto ahora y subir el listado despues. Continuar?')) {
+        irAPaso(2);
+      }
+      return;
+    }
+
+    const datos = new FormData();
+    if (hayArchivo) datos.append('piezas', bolsa.piezas.file, bolsa.piezas.file.name);
+    if (hayTexto) datos.append('piezas_texto', textoPiezas.value);
+    datos.append('peso_es_total', document.getElementById('peso_es_total').value);
+
+    if (btnAnalizar) {
+      btnAnalizar.disabled = true;
+      btnAnalizar.classList.add('pulsando');
+    }
+    if (estadoAnalisis) estadoAnalisis.textContent = 'Leyendo la lista...';
+
+    const terminar = function () {
+      if (btnAnalizar) {
+        btnAnalizar.disabled = false;
+        btnAnalizar.classList.remove('pulsando');
+      }
+      if (estadoAnalisis) estadoAnalisis.textContent = '';
+    };
+
+    fetch('/admin/nuevo/analizar', { method: 'POST', body: datos })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        terminar();
+        if (!data.ok) {
+          window.avisar(data.error || 'No se pudo leer la lista.', 'error');
+          return;
+        }
+        mostrarResumen(data, avanzar);
+        if (avanzar) window.avisar(data.totals.piezas + ' renglones leidos correctamente.', 'exito');
+        else window.avisar('Pesos recalculados: ' + numero(data.totals.peso, 2) + ' kg', 'exito');
+      })
+      .catch(function () {
+        terminar();
+        window.avisar('No se pudo leer la lista. Revisa el archivo e intenta de nuevo.', 'error');
+      });
   }
 
   if (btnAnalizar) {
-    btnAnalizar.addEventListener('click', function () {
-      const hayArchivo = !!bolsa.piezas;
-      const hayTexto = textoPiezas && textoPiezas.value.trim().length > 0;
-
-      if (!hayArchivo && !hayTexto) {
-        if (window.confirm('No seleccionaste ninguna lista de piezas.\n\nPuedes crear el proyecto ahora y subir el listado despues. Continuar?')) {
-          irAPaso(2);
-        }
-        return;
-      }
-
-      const datos = new FormData();
-      if (hayArchivo) datos.append('piezas', bolsa.piezas.file, bolsa.piezas.file.name);
-      if (hayTexto) datos.append('piezas_texto', textoPiezas.value);
-      datos.append('peso_es_total', document.getElementById('peso_es_total').value);
-
-      btnAnalizar.disabled = true;
-      btnAnalizar.classList.add('pulsando');
-      if (estadoAnalisis) estadoAnalisis.textContent = 'Leyendo la lista...';
-
-      fetch('/admin/nuevo/analizar', { method: 'POST', body: datos })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          btnAnalizar.disabled = false;
-          btnAnalizar.classList.remove('pulsando');
-          if (estadoAnalisis) estadoAnalisis.textContent = '';
-          if (!data.ok) {
-            window.avisar(data.error || 'No se pudo leer la lista.', 'error');
-            return;
-          }
-          mostrarResumen(data);
-          window.avisar(data.totals.piezas + ' renglones leidos correctamente.', 'exito');
-        })
-        .catch(function () {
-          btnAnalizar.disabled = false;
-          btnAnalizar.classList.remove('pulsando');
-          if (estadoAnalisis) estadoAnalisis.textContent = '';
-          window.avisar('No se pudo leer la lista. Revisa el archivo e intenta de nuevo.', 'error');
-        });
-    });
+    btnAnalizar.addEventListener('click', function () { analizar(true); });
   }
 
-  /* peso unitario o peso del renglon */
+  /* peso del renglon o peso unitario: se vuelve a leer la lista para que
+     los totales que se muestran sean los de verdad, no una estimacion */
   document.querySelectorAll('[data-peso]').forEach(function (b) {
     b.addEventListener('click', function () {
       document.querySelectorAll('[data-peso]').forEach(function (x) { x.classList.remove('activo'); });
       b.classList.add('activo');
       document.getElementById('peso_es_total').value = b.getAttribute('data-peso');
-      describirPeso(ultimoAnalisis);
+      analizar(false);
     });
   });
 

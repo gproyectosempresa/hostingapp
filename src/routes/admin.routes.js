@@ -65,6 +65,15 @@ function savePieces(projectId, rows, replace, userId) {
 }
 
 /**
+ * "Peso" a secas se toma como peso TOTAL del renglon salvo que el
+ * administrador indique lo contrario en el formulario.
+ */
+function leerPesoEsTotal(valor) {
+  if (valor == null || valor === '') return undefined;   // deja el valor por omision
+  return valor !== '0';
+}
+
+/**
  * Lee las piezas desde el archivo subido O desde el texto pegado en pantalla.
  * Devuelve el mismo formato en los dos casos.
  */
@@ -133,7 +142,7 @@ router.get('/nuevo', (req, res) => {
 router.post('/nuevo/analizar', uploadFields, async (req, res) => {
   const archivo = (req.files && req.files.piezas || [])[0];
   const texto = req.body.piezas_texto;
-  const opciones = { pesoEsTotal: req.body.peso_es_total === '1' };
+  const opciones = { pesoEsTotal: leerPesoEsTotal(req.body.peso_es_total) };
 
   try {
     const leido = await leerPiezas(archivo, texto, opciones);
@@ -184,7 +193,7 @@ router.post('/nuevo', uploadFields, async (req, res) => {
   // Listado de piezas: archivo subido o texto pegado
   let parsed = null;
   const piezasFile = (files.piezas || [])[0];
-  parsed = await leerPiezas(piezasFile, b.piezas_texto, { pesoEsTotal: b.peso_es_total === '1' });
+  parsed = await leerPiezas(piezasFile, b.piezas_texto, { pesoEsTotal: leerPesoEsTotal(b.peso_es_total) });
   if (parsed && !parsed.ok) return fail(parsed.error);
 
   const slug = uniqueSlug(db, b.slug ? slugify(b.slug) : name);
@@ -343,7 +352,7 @@ router.post('/proyecto/:id/piezas', uploadFields, async (req, res) => {
   const project = loadProject(req.params.id);
   if (!project) return res.status(404).send('No encontrado');
   const file = (req.files && req.files.piezas || [])[0];
-  const parsed = await leerPiezas(file, req.body.piezas_texto, { pesoEsTotal: req.body.peso_es_total === '1' });
+  const parsed = await leerPiezas(file, req.body.piezas_texto, { pesoEsTotal: leerPesoEsTotal(req.body.peso_es_total) });
   storage.cleanTmp(file ? [file] : []);
 
   if (!parsed) {

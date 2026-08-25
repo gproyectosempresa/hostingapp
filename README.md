@@ -120,7 +120,8 @@ nombres y sus variantes (singular/plural, con o sin acentos):
 | **Perfil** | Perfil, Sección, Medida, Dimensión | No |
 | **Material** | Material, Grado, Acero, Norma | No |
 | **Cantidad** | Cantidad, Cant, Pzas, Qty | No (por defecto 1) |
-| **Peso** | Peso, Peso unitario, Peso c/u, Kg/pza | **Sí** (o el total) |
+| **Peso** | Peso, Kg — *se toma como el total del renglón* | **Sí** (o el total) |
+| **Peso unitario** | Peso unitario, Peso c/u, Kg/pza | **Sí** (o el total) |
 | **Peso total** | Peso total, Total kg, Kg total | **Sí** (o el unitario) |
 | **Lote** | Lote, Fase, Etapa, Área, Zona, Nivel, Eje | No |
 
@@ -140,8 +141,11 @@ descripción, sin importar cuál columna venga primero.
 
 - **Pegar en vez de subir:** en el paso 1 puedes copiar las filas en Excel (con encabezados)
   y pegarlas directo en pantalla, sin generar archivo.
-- **Peso ambiguo:** si la columna se llama sólo *"Peso"*, la plataforma te pregunta si es el peso
-  de una pieza o el del renglón completo, y te muestra un ejemplo con tus propios números.
+- **Columna "Peso" a secas:** se toma como el **peso total del renglón** (no por pieza), que es como
+  lo entrega el sistema de ingeniería. El peso unitario se calcula solo dividiendo entre la cantidad.
+  En el alta puedes cambiar esa interpretación si algún archivo viene al revés; al cambiarla se
+  recalcula todo y te muestra un ejemplo con tus propios números. Una columna llamada
+  *"Peso unitario"* siempre se entiende como peso por pieza.
 - Si falta el peso total, se calcula con `unitario × cantidad` (y al revés).
 - **Decimales:** se analiza la columna completa para decidir si el punto es decimal o separador de
   miles. Así `417.726` junto a `995.629656` se entiende bien como 417.726 kg, no como 417 726 kg.
