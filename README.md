@@ -257,6 +257,13 @@ comas (por ejemplo: `Habilitado, Armado, Soldado, Pintura, Embarcado`).
 **Un archivo pesa más de 200 MB.**
 Sube el límite con `MAX_FILE_MB` en el `.env`. Considera el espacio de tu plan de hosting.
 
+**El plano se queda cargando y no aparece.**
+En la computadora el PDF se muestra dentro de la página; si tarda más de unos segundos aparece un
+aviso con el botón para abrirlo en una pestaña nueva. En el celular los navegadores casi nunca
+dibujan un PDF incrustado, así que la plataforma muestra directamente el botón **Ver el plano**,
+que lo abre en el lector del teléfono (ahí se puede acercar y alejar con los dedos).
+Los archivos DXF y DWG siempre se descargan: se abren con AutoCAD o Tekla, no con el navegador.
+
 **¿Aguanta proyectos grandes?**
 Sí. Un proyecto de 1 500 piezas con 3 etapas de checklist y 300 planos se da de alta en
 ~3 segundos, la página pesa 65 KB comprimidos en el celular y cada palomita se guarda en ~16 ms.

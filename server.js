@@ -29,8 +29,15 @@ app.locals.anio = new Date().getFullYear();
 app.locals.v = versionDeAssets(path.join(__dirname, 'public'));
 
 // Comprime el HTML: las listas de cientos de piezas viajan hasta 10 veces
-// mas ligeras al celular del taller.
-app.use(compression());
+// mas ligeras al celular del taller.  Los planos NO se comprimen: ya vienen
+// comprimidos y ademas hay que servirlos por rangos para que el visor de
+// PDF pueda abrirlos por pedazos.
+app.use(compression({
+  filter: (req, res) => {
+    if (req.path.startsWith('/archivo')) return false;
+    return compression.filter(req, res);
+  }
+}));
 
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(express.json({ limit: '2mb' }));

@@ -5,7 +5,7 @@
   <div class="envoltura">
     <div class="fila-entre mb-2 anim">
       <div class="fila crece" style="min-width:220px">
-        <a href="/p/<%= project.slug %>" class="btn btn-fantasma"><%- icon('flechaIzq', 18) %></a>
+        <a href="/p/<%= project.slug %>" class="btn btn-fantasma" title="Volver al proyecto"><%- icon('flechaIzq', 18) %></a>
         <div class="crece" style="min-width:0">
           <h1 style="font-size:1.1rem;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
             <%= doc.original_name %>
@@ -17,25 +17,59 @@
           </div>
         </div>
       </div>
-      <div class="fila">
-        <a class="btn btn-primario" href="/archivo/<%= doc.id %>?descargar=1">
+      <div class="fila" style="gap:8px">
+        <a class="btn btn-primario" href="/archivo/<%= doc.id %>" target="_blank" rel="noopener">
+          <%- icon('externo', 17) %> Abrir
+        </a>
+        <a class="btn btn-linea" href="/archivo/<%= doc.id %>?descargar=1">
           <%- icon('descargar', 17) %> Descargar
         </a>
       </div>
     </div>
 
     <% if (esPdf) { %>
-      <div class="visor-caja anim anim-1">
-        <iframe src="/archivo/<%= doc.id %>#view=FitH" style="height:80vh" title="<%= doc.original_name %>"></iframe>
+      <!-- En computadora el plano se ve aqui mismo; en celular el navegador
+           casi nunca dibuja un PDF incrustado, asi que se ofrecen los botones. -->
+      <div class="visor-caja oculto anim anim-1" id="marcoPdf">
+        <iframe id="pdfEmbebido" title="<%= doc.original_name %>" style="height:80vh"></iframe>
       </div>
-      <p class="txt-suave txt-chico centro mt-2">
-        Si el plano no se ve en tu celular, usa el boton <b>Descargar</b> y abrelo con tu lector de PDF.
-      </p>
+
+      <div class="tarjeta vacio oculto anim anim-1" id="pdfBotones">
+        <div class="vacio-icono" style="background:var(--rojo-suave);color:var(--rojo)"><%- icon('archivo', 32) %></div>
+        <h3>Abre el plano en tu celular</h3>
+        <p>Toca el boton y el plano se abre en el lector de tu telefono, donde puedes acercar y alejar con los dedos.</p>
+        <div class="fila" style="justify-content:center;flex-wrap:wrap;gap:10px">
+          <a class="btn btn-primario btn-grande" href="/archivo/<%= doc.id %>" target="_blank" rel="noopener">
+            <%- icon('ojo', 18) %> Ver el plano
+          </a>
+          <a class="btn btn-linea btn-grande" href="/archivo/<%= doc.id %>?descargar=1">
+            <%- icon('descargar', 18) %> Guardar
+          </a>
+        </div>
+      </div>
+
+      <div class="aviso aviso-aviso oculto mt-2" id="pdfLento">
+        <%- icon('info', 19) %>
+        <div class="crece">
+          <b>El plano esta tardando en aparecer</b>
+          Abrelo directamente en una pestana nueva:
+          <div class="fila mt-1" style="gap:8px;flex-wrap:wrap">
+            <a class="btn btn-primario btn-chico" href="/archivo/<%= doc.id %>" target="_blank" rel="noopener">
+              <%- icon('externo', 14) %> Abrir el plano
+            </a>
+            <a class="btn btn-linea btn-chico" href="/archivo/<%= doc.id %>?descargar=1">
+              <%- icon('descargar', 14) %> Descargar
+            </a>
+          </div>
+        </div>
+      </div>
+
     <% } else if (esImagen) { %>
       <div class="tarjeta centro anim anim-1">
         <img src="/archivo/<%= doc.id %>" alt="<%= doc.original_name %>"
              style="max-width:100%;border-radius:var(--r-m);box-shadow:var(--sombra-m)">
       </div>
+
     <% } else { %>
       <div class="tarjeta vacio anim anim-1">
         <div class="vacio-icono"><%- icon('archivo', 32) %></div>
@@ -51,6 +85,38 @@
     <% } %>
   </div>
 </div>
+
+<% if (esPdf) { %>
+<script>
+  (function () {
+    var marco = document.getElementById('marcoPdf');
+    var botones = document.getElementById('pdfBotones');
+    var aviso = document.getElementById('pdfLento');
+    var iframe = document.getElementById('pdfEmbebido');
+    var url = '/archivo/<%= doc.id %>';
+
+    // Un telefono se reconoce por pantalla chica y pantalla tactil.
+    var esCelular = window.matchMedia &&
+      window.matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+
+    if (esCelular) {
+      botones.classList.remove('oculto');
+      return;
+    }
+
+    marco.classList.remove('oculto');
+    var cargo = false;
+    iframe.addEventListener('load', function () { cargo = true; });
+    iframe.src = url + '#view=FitH';
+
+    // Si en unos segundos el plano no aparecio, se ofrece abrirlo aparte
+    // en vez de dejar al usuario mirando una pantalla en blanco.
+    setTimeout(function () {
+      if (!cargo) aviso.classList.remove('oculto');
+    }, 4000);
+  })();
+</script>
+<% } %>
 
 <%- include('partials/tabbar') %>
 <%- include('partials/foot') %>

@@ -213,6 +213,16 @@ router.get('/api/pieza/:id', auth.requireLogin, (req, res) => {
 
 /* --------------------------- ARCHIVOS --------------------------- */
 
+/**
+ * Arma el encabezado del nombre del archivo.  Se manda la version simple
+ * (para navegadores viejos) y la version UTF-8, para que los acentos y
+ * espacios lleguen bien al guardar.
+ */
+function disposicion(tipo, nombre) {
+  const simple = String(nombre).replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '');
+  return tipo + '; filename="' + simple + '"; filename*=UTF-8\'\'' + encodeURIComponent(nombre);
+}
+
 router.get('/archivo/:id', auth.requireLogin, (req, res) => {
   const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(Number(req.params.id));
   if (!doc) return res.status(404).send('Archivo no encontrado');
@@ -222,12 +232,26 @@ router.get('/archivo/:id', auth.requireLogin, (req, res) => {
   const ext = String(doc.ext || '').toLowerCase();
   const mime = INLINE_TYPES[ext];
   const download = req.query.descargar === '1' || !mime;
-  res.setHeader('Content-Type', mime || 'application/octet-stream');
-  res.setHeader(
-    'Content-Disposition',
-    (download ? 'attachment' : 'inline') + '; filename="' + encodeURIComponent(doc.original_name) + '"'
-  );
-  fs.createReadStream(full).pipe(res);
+
+  /*
+   * sendFile se encarga de Content-Length, Accept-Ranges y las peticiones
+   * por rango (206).  Los visores de PDF piden el archivo por pedazos: sin
+   * eso se quedan "pensando" esperando una respuesta parcial que no llega.
+   */
+  res.sendFile(full, {
+    acceptRanges: true,
+    cacheControl: true,
+    maxAge: '7d',
+    lastModified: true,
+    headers: {
+      'Content-Type': mime || 'application/octet-stream',
+      'Content-Disposition': disposicion(download ? 'attachment' : 'inline', doc.original_name)
+    }
+  }, (err) => {
+    if (err && !res.headersSent) {
+      res.status(err.status || 500).send('No se pudo abrir el archivo');
+    }
+  });
 });
 
 /* --------------------- VISOR DE PLANOS (pantalla) --------------------- */
