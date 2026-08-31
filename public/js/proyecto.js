@@ -162,7 +162,7 @@
     if (!cajon) return;
     cajonCuerpo.innerHTML = '<div class="centro pulsando txt-suave" style="padding:40px 0">Cargando...</div>';
     cajon.classList.add('visible');
-    cortina.classList.add('visible');
+    if (cortina) cortina.classList.add('visible');
 
     fetch('/api/pieza/' + id)
       .then(function (r) { return r.json(); })
